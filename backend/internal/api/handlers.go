@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"complaint-portal/internal/models"
-	"complaint-portal/internal/store"
+	"null-secret/internal/models"
+	"null-secret/internal/store"
 )
 
 type API struct {

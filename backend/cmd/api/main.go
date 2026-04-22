@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"complaint-portal/internal/api"
-	"complaint-portal/internal/store"
+	"null-secret/internal/api"
+	"null-secret/internal/store"
 )
 
 func main() {
