@@ -1,0 +1,195 @@
+/* ── Claude-inspired Typography via Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #0D0D0D;
+  --border: #D4D4D4;
+  --muted: #737373;
+  --surface: #F5F5F5;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+.dark {
+  --background: #0D0D0D;
+  --foreground: #FAFAFA;
+  --border: #404040;
+  --muted: #A3A3A3;
+  --surface: #1A1A1A;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+/* NULL-SECRET Design System: 0px Border Radius, 1px Borders */
+* {
+  border-radius: 0 !important;
+}
+
+/* High Contrast Focus States */
+*:focus-visible {
+  outline: 2px solid var(--foreground) !important;
+  outline-offset: 2px !important;
+}
+
+input,
+select,
+textarea,
+button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Label style: replaces old 10px uppercase with readable mixed-case ── */
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* Motion: Strictly functional, fast fades */
+.fade-in {
+  animation: fadeIn 0.15s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Lottie Visibility ──
+   Instead of CSS invert (which breaks colors), we use
+   a wrapper that adjusts opacity and filter per theme. */
+.lottie-themed {
+  opacity: 0.85;
+  transition: filter 0.2s ease;
+}
+
+.dark .lottie-themed {
+  filter: invert(1) hue-rotate(180deg);
+  opacity: 0.9;
+}
+
+/* Select dropdown arrow */
+select {
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23737373" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position-x: calc(100% - 8px);
+  background-position-y: 50%;
+}
+
+.dark select {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23A3A3A3" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* ── Preloader ── */
+.preloader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.preloader-column {
+  flex: 1;
+  height: 100%;
+  background-color: var(--foreground);
+  transform: translateY(0);
+}
+
+.preloader-column-exit {
+  animation: columnSlideUp 0.7s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+
+@keyframes columnSlideUp {
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+.preloader-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: filter 0.6s ease-out, opacity 0.3s ease;
+}
+
+.preloader-blur {
+  filter: blur(10px);
+  opacity: 0.6;
+}
+
+.preloader-fade-out {
+  opacity: 0;
+}
+
+.preloader-lottie {
+  width: 120px;
+  height: 120px;
+  filter: invert(1);
+}
+
+.dark .preloader-lottie {
+  filter: none;
+}
+
+.preloader-text {
+  margin-top: 1.5rem;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--background);
+}
