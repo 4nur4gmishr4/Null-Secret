@@ -1,3 +1,3 @@
-module complaint-portal
+module null-secret
 
 go 1.21

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"complaint-portal/internal/models"
+	"null-secret/internal/models"
 )
 
 const maxSecretsPerShard = 100 // SEC-02: 256 shards * 100 = 25,600 secrets total limit
