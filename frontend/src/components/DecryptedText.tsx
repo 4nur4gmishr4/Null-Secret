@@ -5,16 +5,19 @@ interface DecryptedTextProps {
   speed?: number;
   maxIterations?: number;
   className?: string;
+  onComplete?: () => void;
+  trigger?: number; // whenever this changes, re-trigger
 }
 
 const DecryptedText: React.FC<DecryptedTextProps> = ({
   text,
   speed = 50,
   maxIterations = 10,
-  className = ""
+  className = "",
+  onComplete,
+  trigger = 0
 }) => {
   const [displayText, setDisplayText] = useState('');
-  // Mixed-case character pool for a more refined scramble effect
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const intervalRef = useRef<number | null>(null);
 
@@ -35,6 +38,9 @@ const DecryptedText: React.FC<DecryptedTextProps> = ({
 
       if (iteration >= text.length) {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        if (onComplete) {
+          onComplete();
+        }
       }
       iteration += 1 / maxIterations;
     }, speed);
@@ -42,7 +48,7 @@ const DecryptedText: React.FC<DecryptedTextProps> = ({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [text, speed, maxIterations]);
+  }, [text, speed, maxIterations, trigger, onComplete]);
 
   return <span className={className}>{displayText}</span>;
 };
