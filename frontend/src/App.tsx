@@ -8,6 +8,7 @@ const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
 const Success = React.lazy(() => import('./pages/Success'));
 const ViewSecret = React.lazy(() => import('./pages/ViewSecret'));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
 
 const NotFound: React.FC = () => (
   <div className="text-center py-24 space-y-4 slide-up">
@@ -43,6 +44,7 @@ const App: React.FC = () => {
               <Route path="/app" element={<Home />} />
               <Route path="/s/:id" element={<Success />} />
               <Route path="/v/:id" element={<ViewSecret />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
