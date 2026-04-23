@@ -168,6 +168,19 @@ GET /healthz
 { "status": "OK", "storage": "healthy" }
 ```
 
+### Free Tier Deployment Strategy (Zero-Delay)
+
+If you are hosting the Go backend on a free tier platform like **Render**, the server will automatically spin down (go to sleep) after 15 minutes of inactivity. When the next user visits, the API will suffer a 30-50 second "Cold Start" delay while the server wakes up.
+
+To achieve **100% free hosting with zero delay**, you can use a "Keep-Alive" strategy:
+
+1. Deploy the Frontend to **Vercel** (Free, Edge network, never sleeps).
+2. Deploy the Backend to **Render** (Free Web Service).
+3. Use a free external cron service like **[cron-job.org](https://cron-job.org/)**.
+4. Create a cron job that sends a `GET` request to your backend's health check endpoint (e.g., `https://your-api.onrender.com/healthz`) every **10 minutes**.
+
+Because the server receives a request every 10 minutes, the 15-minute sleep timer is constantly reset. Your in-memory database will remain permanently awake, providing instant API responses for free.
+
 ## Configuration
 
 | Variable         | Default                   | Description                                    |
