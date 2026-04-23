@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
-import DecryptedText from '../components/DecryptedText';
 import privacyFull from '../assets/lotties/privacyfull.json';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,23 +15,22 @@ const Landing: React.FC = () => {
       <section className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 py-16">
         <div className="space-y-8 max-w-2xl mx-auto">
           {/* Tagline chip */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5" style={{ border: `1px solid var(--border-default)`, background: 'var(--bg-elevated)' }}>
-            <span className="status-dot" style={{ width: '5px', height: '5px' }} />
-            <span className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--text-secondary)' }}>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 glowing-border-chip">
+            <span className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--text-primary)' }}>
               End-to-End Encrypted
             </span>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter leading-[1.1]" style={{ color: 'var(--text-primary)' }}>
-            <DecryptedText text="Zero Knowledge." speed={40} maxIterations={8} />
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tighter leading-[1.2]" style={{ color: 'var(--text-primary)' }}>
+            Securely share sensitive data.
             <br />
             <span style={{ color: 'var(--text-secondary)' }}>
-              Infinite Privacy.
+              Complete privacy guaranteed.
             </span>
           </h1>
 
           <p className="text-sm md:text-base leading-relaxed max-w-lg mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Military-grade encryption that happens entirely in your browser. Your secrets are encrypted, sharded, and permanently destroyed after viewing. We never see your data.
+            Protect your passwords, files, and private messages with end-to-end encryption. Your data is encrypted on your device and self-destructs after being read, ensuring it can never be recovered.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
@@ -109,7 +107,7 @@ const Landing: React.FC = () => {
       {/* ── Trust Section ── */}
       <section className="py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
-          <div className="lottie-themed w-32 h-32 md:w-48 md:h-48 flex-shrink-0">
+          <div className="lottie-themed w-full max-w-[280px] md:max-w-md lg:max-w-lg aspect-square flex-shrink-0 mx-auto">
             <LottieComponent animationData={privacyFull} loop={true} />
           </div>
           <div className="space-y-4 text-center md:text-left">
