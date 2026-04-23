@@ -62,11 +62,7 @@ func (rl *RateLimiter) cleanup() {
 		window := now.Add(-1 * time.Minute)
 		
 		newHits := make(map[string][]time.Time)
-		count := 0
 		for ip, hits := range rl.hits {
-			if count >= 10000 { // Max 10,000 IPs tracked
-				break
-			}
 			var validHits []time.Time
 			for _, t := range hits {
 				if t.After(window) {
@@ -75,7 +71,6 @@ func (rl *RateLimiter) cleanup() {
 			}
 			if len(validHits) > 0 {
 				newHits[ip] = validHits
-				count++
 			}
 		}
 		rl.hits = newHits

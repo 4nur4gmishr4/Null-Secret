@@ -1,57 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Lottie from 'lottie-react';
 import shieldAnimation from '../assets/lotties/shield-morph.json';
 import DecryptedText from './DecryptedText';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const LottiePlayer = (Lottie as any).default || Lottie;
 
 interface PreloaderProps {
   onComplete: () => void;
 }
 
-/**
- * Full-screen preloader with a column-drop reveal animation.
- * - Plays the shield Lottie animation once during load.
- * - Columns slide up to reveal the main app beneath.
- * - All colors adapt to the current theme (black/white).
- */
 export default function Preloader({ onComplete }: PreloaderProps) {
-  const [phase, setPhase] = useState<'intro' | 'focused' | 'exit'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'exit'>('intro');
   const [visible, setVisible] = useState(true);
   const COLUMNS = 6;
 
-  const handleComplete = useCallback(() => {
-    setVisible(false);
-    onComplete();
+  const handleDecryptionComplete = useCallback(() => {
+    // Wait 500ms after text finishes, then start exit (stairs)
+    setTimeout(() => {
+      setPhase('exit');
+      // Wait for exit animation to complete before removing from DOM
+      setTimeout(() => {
+        setVisible(false);
+        onComplete();
+      }, 1000);
+    }, 500);
   }, [onComplete]);
-
-  useEffect(() => {
-    const focusTimer = setTimeout(() => setPhase('focused'), 400);
-    const exitTimer = setTimeout(() => setPhase('exit'), 2200);
-    const completeTimer = setTimeout(handleComplete, 3000);
-
-    return () => {
-      clearTimeout(focusTimer);
-      clearTimeout(exitTimer);
-      clearTimeout(completeTimer);
-    };
-  }, [handleComplete]);
 
   if (!visible) return null;
 
   return (
     <div className="preloader-overlay">
-      {/* Column strips that slide up to reveal content */}
+      {/* Column strips for Stairs effect */}
       {Array.from({ length: COLUMNS }).map((_, i) => (
         <div
           key={i}
           className={`preloader-column ${phase === 'exit' ? 'preloader-column-exit' : ''}`}
-          style={{ animationDelay: phase === 'exit' ? `${i * 0.07}s` : '0s' }}
+          style={{ animationDelay: phase === 'exit' ? `${i * 0.06}s` : '0s' }}
         />
       ))}
 
-      {/* Centered Lottie animation */}
-      <div className={`preloader-content ${phase === 'intro' ? 'preloader-blur' : ''} ${phase === 'exit' ? 'preloader-fade-out' : ''}`}>
+      {/* Centered content */}
+      <div className={`preloader-content ${phase === 'exit' ? 'preloader-fade-out' : ''}`}>
         <div className="preloader-lottie">
           <LottiePlayer
             animationData={shieldAnimation}
@@ -59,9 +49,17 @@ export default function Preloader({ onComplete }: PreloaderProps) {
             autoplay={true}
           />
         </div>
-        <p className="preloader-text">
-          <DecryptedText text="Null-Secret" speed={40} maxIterations={10} />
-        </p>
+        <div 
+          className="preloader-text text-center"
+          style={{ minWidth: '220px' }}
+        >
+          <DecryptedText 
+            text="NULL-SECRET" 
+            speed={25} 
+            maxIterations={6} 
+            onComplete={handleDecryptionComplete} 
+          />
+        </div>
       </div>
     </div>
   );

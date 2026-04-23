@@ -23,35 +23,28 @@ function getSystemTheme(): ThemeMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function resolveTheme(pref: ThemePreference): ThemeMode {
-  return pref === 'system' ? getSystemTheme() : pref;
-}
-
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const stored = (localStorage.getItem('theme-preference') as ThemePreference | null);
   const [preference, setPreference] = useState<ThemePreference>(stored || 'system');
-  const [theme, setTheme] = useState<ThemeMode>(resolveTheme(stored || 'system'));
+  const [osTheme, setOsTheme] = useState<ThemeMode>(getSystemTheme());
+
+  const theme = preference === 'system' ? osTheme : preference;
 
   // Apply theme class to <body>
   useEffect(() => {
-    const resolved = resolveTheme(preference);
-    setTheme(resolved);
-    document.body.className = resolved;
+    document.body.className = theme;
     localStorage.setItem('theme-preference', preference);
-  }, [preference]);
+  }, [theme, preference]);
 
   // Listen for OS theme changes when preference is 'system'
   useEffect(() => {
-    if (preference !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      const next: ThemeMode = e.matches ? 'dark' : 'light';
-      setTheme(next);
-      document.body.className = next;
+      setOsTheme(e.matches ? 'dark' : 'light');
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
-  }, [preference]);
+  }, []);
 
   const cycleTheme = useCallback(() => {
     setPreference(prev => {
