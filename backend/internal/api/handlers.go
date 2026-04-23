@@ -22,8 +22,19 @@ func NewAPI(s *store.Storage) *API {
 func (api *API) CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := os.Getenv("ALLOWED_ORIGIN")
+		reqOrigin := r.Header.Get("Origin")
+
 		if origin == "" {
-			origin = "http://localhost:5173" 
+			allowedOrigins := map[string]bool{
+				"http://localhost:5173":            true,
+				"http://localhost:8080":            true,
+				"https://null-secret.vercel.app":   true,
+			}
+			if allowedOrigins[reqOrigin] {
+				origin = reqOrigin
+			} else {
+				origin = "https://null-secret.vercel.app"
+			}
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
@@ -47,7 +58,7 @@ func (api *API) RateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ip := strings.Split(r.RemoteAddr, ":")[0]
 		if proxyIP := r.Header.Get("X-Forwarded-For"); proxyIP != "" && os.Getenv("TRUST_PROXY") == "true" {
 			ips := strings.Split(proxyIP, ",")
-			ip = strings.TrimSpace(ips[len(ips)-1])
+			ip = strings.TrimSpace(ips[0])
 		}
 
 		if !api.store.Limiter.Allow(ip) {
@@ -96,7 +107,7 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Expiry <= 0 {
-		req.Expiry = 24 
+		req.Expiry = 24
 	}
 
 	id, err := api.store.Store(req.Payload, req.Expiry, req.ViewLimit)
@@ -118,7 +129,7 @@ func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 5 || pathParts[4] == "" { 
+	if len(pathParts) < 5 || pathParts[4] == "" {
 		writeError(w, http.StatusBadRequest, "missing secret id")
 		return
 	}

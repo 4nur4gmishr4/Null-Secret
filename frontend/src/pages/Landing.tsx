@@ -1,57 +1,148 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import Lottie from 'lottie-react';
 import DecryptedText from '../components/DecryptedText';
+import privacyFull from '../assets/lotties/privacyfull.json';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const LottieComponent = (Lottie as any).default || Lottie;
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-12 px-4 fade-in">
-      <div className="space-y-6 max-w-xl mx-auto">
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tighter">
-          <DecryptedText text="Zero Knowledge" speed={45} maxIterations={8} />
-          <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-500 to-gray-900 dark:from-gray-400 dark:to-gray-100">
-            Infinite Privacy.
-          </span>
-        </h1>
+    <div className="fade-in">
+      {/* ── Hero ── */}
+      <section className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 py-16">
+        <div className="space-y-8 max-w-2xl mx-auto">
+          {/* Tagline chip */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5" style={{ border: `1px solid var(--border-default)`, background: 'var(--bg-elevated)' }}>
+            <span className="status-dot" style={{ width: '5px', height: '5px' }} />
+            <span className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--text-secondary)' }}>
+              End-to-End Encrypted
+            </span>
+          </div>
 
-        <p className="text-sm md:text-base leading-relaxed text-balance" style={{ color: 'var(--muted)' }}>
-          A military-grade, end-to-end encrypted messaging system. Your secrets are encrypted in the browser, sharded across memory, and permanently destroyed after viewing. We never see your data.
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter leading-[1.1]" style={{ color: 'var(--text-primary)' }}>
+            <DecryptedText text="Zero Knowledge." speed={40} maxIterations={8} />
+            <br />
+            <span style={{ color: 'var(--text-secondary)' }}>
+              Infinite Privacy.
+            </span>
+          </h1>
+
+          <p className="text-sm md:text-base leading-relaxed max-w-lg mx-auto" style={{ color: 'var(--text-secondary)' }}>
+            Military-grade encryption that happens entirely in your browser. Your secrets are encrypted, sharded, and permanently destroyed after viewing. We never see your data.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+            <button
+              onClick={() => navigate('/app')}
+              className="btn btn-primary w-full sm:w-auto text-xs tracking-widest uppercase"
+              style={{ minWidth: '220px', padding: '16px 32px' }}
+            >
+              Secure a Message
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+            <a
+              href="https://github.com/4nur4gmishr4/Null-Secret"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary w-full sm:w-auto text-xs tracking-widest uppercase"
+              style={{ minWidth: '180px', padding: '16px 32px', textDecoration: 'none' }}
+            >
+              View Source
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section className="py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
+        <div className="text-center mb-12">
+          <span className="label">How It Works</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-0">
+          {[
+            {
+              step: '01',
+              title: 'Client-Side Encryption',
+              desc: 'AES-256-GCM encryption happens entirely in your browser before any data leaves your device. The key stays in the URL fragment — never sent to the server.',
+            },
+            {
+              step: '02',
+              title: 'Burn After Reading',
+              desc: 'Set a view limit of 1 to 5. Once the threshold is reached, the message is atomically deleted from memory. No recovery possible.',
+            },
+            {
+              step: '03',
+              title: 'Zero Disk Storage',
+              desc: 'Our backend runs entirely in RAM with 256 sharded partitions. No databases, no backups, no logs. When the server restarts, everything is gone.',
+            },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="feature-card"
+              style={{
+                borderRight: i < 2 ? undefined : undefined,
+              }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <span className="mono text-[11px] font-medium px-2 py-1" style={{ color: 'var(--text-tertiary)', border: `1px solid var(--border-default)` }}>
+                  {item.step}
+                </span>
+                <h3 className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>
+                  {item.title}
+                </h3>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                {item.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Trust Section ── */}
+      <section className="py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
+        <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
+          <div className="lottie-themed w-32 h-32 md:w-48 md:h-48 flex-shrink-0">
+            <LottieComponent animationData={privacyFull} loop={true} />
+          </div>
+          <div className="space-y-4 text-center md:text-left">
+            <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+              Cryptographically Enforced Privacy
+            </h2>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              Unlike traditional secret-sharing services, Null-Secret uses a zero-knowledge architecture. The encryption key never reaches our infrastructure — it travels only in the URL fragment, which browsers strip from network requests by design.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4">
+              {['AES-256-GCM', 'PBKDF2 100K', 'Zero Logs', 'Auto Destruct'].map((tag) => (
+                <span key={tag} className="text-[10px] font-semibold tracking-wider uppercase text-center py-2 px-3" style={{ color: 'var(--text-tertiary)', border: `1px solid var(--border-default)` }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="py-16 text-center" style={{ borderTop: `1px solid var(--border-default)` }}>
+        <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+          Ready to send something that can never be traced?
         </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl text-left border-y py-12" style={{ borderColor: 'var(--border)' }}>
-        <div className="space-y-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center border font-mono text-xs" style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}>01</div>
-          <h3 className="text-sm font-bold tracking-wide">Client-Side Encryption</h3>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>AES-GCM encryption happens before the payload ever leaves your device.</p>
-        </div>
-        <div className="space-y-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center border font-mono text-xs" style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}>02</div>
-          <h3 className="text-sm font-bold tracking-wide">Burn After Reading</h3>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>View limits enforce strict self-destruction. Once read, it's mathematically gone.</p>
-        </div>
-        <div className="space-y-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center border font-mono text-xs" style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}>03</div>
-          <h3 className="text-sm font-bold tracking-wide">Zero Disk Logs</h3>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>Our backend runs entirely in RAM. No databases, no backups, no traces.</p>
-        </div>
-      </div>
-
-      <div className="pt-8 w-full max-w-md mx-auto">
         <button
           onClick={() => navigate('/app')}
-          className="w-full bg-current text-white dark:text-black font-semibold py-5 hover:opacity-85 transition-all duration-300 text-sm tracking-widest uppercase relative overflow-hidden group"
+          className="btn btn-primary text-xs tracking-widest uppercase mx-auto"
+          style={{ minWidth: '240px', padding: '16px 32px' }}
         >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            Secure a Message
-            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </span>
+          Create Encrypted Message
         </button>
-      </div>
+      </section>
     </div>
   );
 };
