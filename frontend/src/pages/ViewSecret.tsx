@@ -219,7 +219,7 @@ const ViewSecret: React.FC = () => {
     return (
       <div className="max-w-2xl mx-auto space-y-6 slide-up" aria-live="polite">
         <div className="flex flex-col items-center text-center py-8 space-y-4">
-          <div className="lottie-themed w-20 h-20">
+          <div className="lottie-themed w-32 h-32 md:w-48 md:h-48">
             <LottieComponent animationData={privacyLock} loop={true} />
           </div>
           <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
