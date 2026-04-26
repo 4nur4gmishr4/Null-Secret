@@ -13,6 +13,8 @@ const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
 const Authscreen = React.lazy(() => import('./components/Authscreen'));
 const Signup = React.lazy(() => import('./components/Signup'));
 const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
+const UsageHistory = React.lazy(() => import('./pages/UsageHistory'));
+const SecuritySettings = React.lazy(() => import('./pages/SecuritySettings'));
 
 const NotFound: React.FC = () => (
   <div className="text-center py-24 space-y-4 slide-up">
@@ -63,6 +65,8 @@ const App: React.FC = () => {
               <Route path="/login" element={<Authscreen />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/history" element={<UsageHistory />} />
+              <Route path="/security" element={<SecuritySettings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

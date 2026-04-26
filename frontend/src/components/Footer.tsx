@@ -61,8 +61,8 @@ export default function Footer() {
                                 </a>
                             </li>
                             <li>
-                                <a href="https://anuragmishra.dev" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>
-                                    <span>Portfolio</span>
+                                <a href="mailto:anuragmishrasnag06082004@gmail.com" className="flex items-center gap-2 hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>
+                                    <span>Email</span>
                                 </a>
                             </li>
                             <li className="pt-2">
@@ -83,8 +83,8 @@ export default function Footer() {
             </div>
 
             {/* Massive Background Text */}
-            <div className="absolute bottom-0 left-0 w-full flex items-end overflow-hidden opacity-[0.03] md:opacity-[0.08] pointer-events-none select-none z-0 pb-2">
-                <span className="text-[15vw] leading-[0.8] tracking-widest uppercase whitespace-nowrap font-logo animate-marquee" style={{ color: 'var(--text-primary)' }}>
+            <div className="absolute bottom-0 left-0 w-full flex items-end overflow-hidden opacity-[0.05] md:opacity-[0.12] pointer-events-none select-none z-0 pb-2">
+                <span className="text-[15vw] leading-[0.8] tracking-widest uppercase whitespace-nowrap font-logo animate-marquee" style={{ color: 'var(--text-primary)', filter: 'blur(1px)' }}>
                     NULL-SECRET
                 </span>
             </div>

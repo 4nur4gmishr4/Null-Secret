@@ -52,14 +52,14 @@ func (api *API) CorsMiddleware(next http.Handler) http.Handler {
 		envOrigin := os.Getenv("ALLOWED_ORIGIN")
 		
 		// If ALLOWED_ORIGIN is set, allow only that and localhost for development
-		if reqOrigin == "http://localhost:5173" || reqOrigin == "http://localhost:8080" {
+		if reqOrigin == "http://localhost:5173" || reqOrigin == "http://localhost:5174" || reqOrigin == "http://localhost:8080" {
 			origin = reqOrigin
 		} else if envOrigin != "" && reqOrigin == envOrigin {
 			origin = reqOrigin
 		} else if envOrigin != "" {
 			origin = envOrigin // Fallback for browsers that don't send Origin header (though they usually do for CORS)
 		} else {
-			origin = "http://localhost:5173" // Default dev origin
+			origin = "http://localhost:5174" // Default dev origin
 		}
 
 		w.Header().Set("Access-Control-Allow-Origin", origin)
