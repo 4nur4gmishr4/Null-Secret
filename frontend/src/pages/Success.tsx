@@ -8,20 +8,34 @@ const Success: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const keyStr = location.hash.replace('#', '');
+  
+  const hash = location.hash.replace('#', '');
+  const keyStr = hash;
+  const adminKey = location.state?.adminKey;
+  
+  React.useEffect(() => {
+    if (adminKey && id) {
+      const keys = JSON.parse(localStorage.getItem('nullSecret_adminKeys') || '{}');
+      keys[id] = adminKey;
+      localStorage.setItem('nullSecret_adminKeys', JSON.stringify(keys));
+    }
+  }, [adminKey, id]);
+  
   const [copied, setCopied] = useState(false);
+  const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
   const fullUrl = `${window.location.origin}/v/${id}#${keyStr}`;
+  const adminUrl = adminKey ? `${window.location.origin}/admin/${id}` : '';
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(fullUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const copyToClipboard = (text: string, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    navigator.clipboard.writeText(text);
+    setter(true);
+    setTimeout(() => setter(false), 2500);
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 slide-up">
+    <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up">
       {/* Header */}
       <div className="space-y-2 mb-8">
         <div className="flex items-center gap-3">
@@ -31,53 +45,57 @@ const Success: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            {copied ? 'Copied to Clipboard' : 'Your Secure Link Is Ready'}
+            {copied || copiedAdmin ? 'Copied to Clipboard' : 'Your Secure Links Are Ready'}
           </h2>
         </div>
+      </div>
+
+      {/* Secret Link Display */}
+      <div className="space-y-2">
+        <label className="label">Secret Link (For Recipient)</label>
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           Share this link with the intended recipient. The encryption key is embedded in the URL fragment.
         </p>
+        <div className="link-display" aria-live="assertive">
+          {fullUrl}
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <button
+            onClick={() => copyToClipboard(fullUrl, setCopied)}
+            className={`btn w-full text-xs tracking-wider uppercase ${copied ? 'btn-secondary' : 'btn-primary'}`}
+          >
+            {copied ? 'Copied!' : 'Copy Secret Link'}
+          </button>
+          <button
+            onClick={() => setShowQR(!showQR)}
+            className="btn btn-secondary w-full text-xs tracking-wider uppercase"
+          >
+            {showQR ? 'Hide QR' : 'Show QR'}
+          </button>
+        </div>
       </div>
 
-      {/* Link Display */}
-      <div className="link-display" aria-live="assertive">
-        {fullUrl}
-      </div>
-
-      {/* Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={copyToClipboard}
-          className={`btn w-full text-xs tracking-wider uppercase ${copied ? 'btn-secondary' : 'btn-primary'}`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            {copied ? (
-              <polyline points="20 6 9 17 4 12" />
-            ) : (
-              <>
-                <rect x="9" y="9" width="13" height="13" rx="0" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </>
-            )}
-          </svg>
-          {copied ? 'Copied!' : 'Copy Link'}
-        </button>
-        <button
-          onClick={() => setShowQR(!showQR)}
-          className="btn btn-secondary w-full text-xs tracking-wider uppercase"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-            <rect x="14" y="14" width="3" height="3" />
-            <rect x="19" y="14" width="2" height="2" />
-            <rect x="14" y="19" width="2" height="2" />
-            <rect x="19" y="19" width="2" height="2" />
-          </svg>
-          {showQR ? 'Hide QR' : 'Show QR'}
-        </button>
-      </div>
+      {/* Admin Link Display */}
+      {adminUrl && (
+        <div className="space-y-2 pt-6">
+          <label className="label">Admin Dashboard Link (For You)</label>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            Keep this link secret! Use it to track view status and manually burn the message before it's read.
+          </p>
+          <div className="link-display" aria-live="assertive" style={{ borderColor: 'var(--border-strong)', color: 'var(--text-secondary)' }}>
+            {adminUrl}
+          </div>
+          <div className="pt-2">
+            <button
+              onClick={() => copyToClipboard(adminUrl, setCopiedAdmin)}
+              className={`btn w-full text-xs tracking-wider uppercase ${copiedAdmin ? 'btn-secondary' : 'btn-ghost'}`}
+              style={{ border: '1px solid var(--border-default)' }}
+            >
+              {copiedAdmin ? 'Copied!' : 'Copy Admin Link'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* QR Code */}
       {showQR && (
@@ -93,11 +111,12 @@ const Success: React.FC = () => {
       )}
 
       {/* Security Notes */}
-      <div className="space-y-0">
+      <div className="space-y-0 pt-6">
         {[
           'The encryption key never touches our server.',
           'The link works only for the specified number of views.',
           'Once fully viewed, the message is destroyed permanently.',
+          'Do not lose the admin link.'
         ].map((note, i) => (
           <div key={i} className="info-row" style={{ borderTop: i === 0 ? undefined : 'none' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}>
@@ -111,7 +130,7 @@ const Success: React.FC = () => {
       {/* Create Another */}
       <button
         onClick={() => navigate('/app')}
-        className="btn btn-ghost w-full text-xs tracking-wider uppercase"
+        className="btn btn-ghost w-full text-xs tracking-wider uppercase mt-4"
       >
         Create Another Message
       </button>

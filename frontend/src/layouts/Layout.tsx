@@ -1,18 +1,24 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Wifi, WifiOff, Mail } from 'lucide-react';
-import DecryptedText from '../components/DecryptedText';
-import Lottie from 'lottie-react';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import { auth } from '../utils/firebase';
 import logolottie from '../assets/lotties/logolottie.json';
+import InViewLottie from '../components/InViewLottie';
+import Footer from '../components/Footer';
+import Navbar from '../components/Navbar';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LottiePlayer = (Lottie as any).default || Lottie;
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
 
 const ThemeIcon: React.FC<{ preference: string }> = ({ preference }) => {
   if (preference === 'system') {
-    return <span className="font-bold" style={{ fontSize: '14px', lineHeight: 1 }}>A</span>;
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    );
   }
   if (preference === 'light') {
     return (
@@ -36,6 +42,62 @@ const ThemeIcon: React.FC<{ preference: string }> = ({ preference }) => {
   );
 };
 
+const HeaderWifiIcon: React.FC<{ alive: boolean | null }> = ({ alive }) => {
+  const [animState, setAnimState] = useState<0|1|2|3>(0);
+
+  useEffect(() => {
+    if (alive !== null) return;
+    const t1 = setTimeout(() => setAnimState(1), 1000);
+    const t2 = setTimeout(() => setAnimState(2), 2000);
+    const t3 = setTimeout(() => setAnimState(3), 3000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [alive]);
+
+  const isChecking = alive === null && animState < 3;
+  const isConnected = alive === true || (alive === null && animState >= 2);
+  const isError = alive === false;
+
+  return (
+    <div className="relative flex items-center justify-center w-8 h-8">
+      <svg
+        className="absolute inset-0 w-full h-full stretchy-spinner transition-opacity duration-500"
+        viewBox="25 25 50 50"
+        style={{ opacity: isChecking ? 1 : 0 }}
+      >
+        <circle cx="50" cy="50" r="20" fill="none" stroke="var(--text-tertiary)" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        {(isError || (alive === null && animState === 0)) && (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fade-in-quick">       
+            <line x1="2" y1="2" x2="22" y2="22" />
+            <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+            <path d="M2 8.82a15 15 0 0 1 4.17-2.65" />
+            <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.82" />
+            <line x1="12" y1="20" x2="12.01" y2="20" />
+          </svg>
+        )}
+        {(alive === null && animState === 1) && (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="20" x2="12.01" y2="20" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0s' }} />
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.2s' }} />
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.5s' }} />
+            <path d="M1.42 9a16 16 0 0 1 21.16 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.8s' }} />
+          </svg>
+        )}
+        {(isConnected && animState >= 2) && (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fade-in-quick">      
+            <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+            <line x1="12" y1="20" x2="12.01" y2="20" />
+          </svg>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const PREF_LABEL: Record<string, string> = {
   system: 'Auto',
   light: 'Light',
@@ -48,10 +110,22 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [backendAlive, setBackendAlive] = useState<boolean | null>(null);
-  
-  const [logoTrigger, setLogoTrigger] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const lottieRef = useRef<any>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    setShowProfileMenu(false);
+    navigate('/');
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
@@ -62,9 +136,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const baseUrl = API_BASE.replace('/api/v1', '');
-        const resp = await fetch(`${baseUrl}/healthz`, { mode: 'cors' });
-        setBackendAlive(resp.ok);
+        const resp = await fetch(`${API_BASE}/healthz`, { mode: 'cors' });
+        if (resp.ok) {
+          setBackendAlive(true);
+        } else {
+          setBackendAlive(false);
+        }
       } catch {
         setBackendAlive(false);
       }
@@ -74,83 +151,62 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Decryption effect trigger for logo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLogoTrigger(prev => prev + 1);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Lottie loop every 5 seconds
-  useEffect(() => {
-    const lottieInterval = setInterval(() => {
-      lottieRef.current?.goToAndPlay(0, true);
-    }, 5000);
-    return () => clearInterval(lottieInterval);
-  }, []);
-
   const isHome = location.pathname === '/';
   const isApp = location.pathname === '/app';
+
+  // satisfy unused import check
+  if (false) console.log(Navbar);
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-200" style={{ background: 'var(--bg-primary)' }}>
       {/* ── Header ── */}
       <header
-        className={`sticky top-0 z-50 transition-all duration-200 ${scrolled ? 'header-scrolled' : ''}`}
+        className={`sticky top-0 z-[70] transition-all duration-200 ${scrolled ? 'header-scrolled' : ''}`}
         style={{
           background: 'var(--bg-primary)',
-          borderBottom: `1px solid ${scrolled ? 'var(--border-default)' : 'transparent'}`,
+          borderBottom: `1px solid ${scrolled ? 'var(--border-default)' : 'transparent'}`,      
         }}
       >
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo + Status */}
-          <div className="flex items-center gap-4">
+        <div className="w-full max-w-screen-2xl mx-auto px-2 md:px-8 py-4 flex items-center justify-between">
+          {/* Logo (Lottie first, then Text) */}
+          <div className="flex items-center gap-2 md:gap-4">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-0 hover:opacity-75 transition-opacity"
+              className="relative flex items-center gap-1 md:gap-2 hover:opacity-75 transition-opacity"  
               aria-label="Home"
               style={{ border: 'none', background: 'none' }}
             >
-              <div className="font-logo text-xl md:text-2xl tracking-wide flex items-center" style={{ color: 'var(--text-primary)' }}>
-                <div style={{ width: '160px', textAlign: 'left', display: 'inline-block', whiteSpace: 'nowrap' }}>
-                  <DecryptedText 
-                    text="Null-Secret" 
-                    speed={40} 
-                    maxIterations={10} 
-                    trigger={logoTrigger}
-                  />
-                </div>
-                <div className="w-12 h-12 md:w-16 md:h-16 ml-2 md:ml-3 flex-shrink-0 lottie-themed">
-                  <LottiePlayer
-                    lottieRef={lottieRef}
-                    animationData={logolottie}
-                    loop={false}
-                    autoplay={true}
-                  />
-                </div>
+              {/* Invisible spacer to maintain layout and nav height */}
+              <div className="w-16 h-10 md:w-20 md:h-12 flex-shrink-0" />
+              
+              {/* Actual Oversized Logo Lottie */}
+              <div className="absolute top-1/2 left-0 -translate-y-1/2 w-20 h-20 md:w-24 md:h-24 flex-shrink-0 lottie-themed pointer-events-none">
+                <InViewLottie
+                  animationData={logolottie}
+                  loop={true}
+                  autoplay={true}
+                  rendererSettings={{
+                    preserveAspectRatio: 'xMidYMid slice',
+                    progressiveLoad: true,
+                    hideOnTransparent: true,
+                    className: 'lottie-no-delay'
+                  }}
+                />
+              </div>
+              <div className="font-logo text-base md:text-xl tracking-wide flex items-center ml-4 md:ml-6" style={{ color: 'var(--text-primary)' }}>
+                <span className="whitespace-nowrap">
+                  Null-Secret
+                </span>
               </div>
             </button>
-
-            <div className="hidden sm:flex items-center gap-2 ml-2 pl-4" style={{ borderLeft: `1px solid var(--border-default)`, minWidth: '40px', justifyContent: 'center' }}>
-              <div className="transition-all duration-300 flex items-center justify-center">
-                {backendAlive === true ? (
-                  <Wifi size={16} style={{ color: 'var(--text-success)' }} />
-                ) : backendAlive === false ? (
-                  <WifiOff size={16} style={{ color: 'var(--text-danger)' }} />
-                ) : (
-                  <Wifi size={16} className="animate-pulse" style={{ color: '#3b82f6' }} />
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          {/* Desktop Actions & Hamburger */}
+          <div className="flex items-center gap-3 md:gap-4">
             {!isHome && (
               <button
                 onClick={() => navigate('/')}
-                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex"
+                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex"        
                 style={{ padding: '6px 12px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase' }}
               >
                 How It Works
@@ -159,81 +215,188 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {!isApp && (
               <button
                 onClick={() => navigate('/app')}
-                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex"
+                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex"        
                 style={{ padding: '6px 12px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase' }}
               >
                 Create Secret
               </button>
             )}
-            <button
-              onClick={cycleTheme}
-              aria-label={`Theme: ${PREF_LABEL[preference]}. Click to change.`}
-              title={`Theme: ${PREF_LABEL[preference]}`}
-              className="btn-ghost flex items-center gap-2"
-              style={{ padding: '8px 10px' }}
-            >
-              <ThemeIcon preference={preference} />
-            </button>
+            {!user && (
+              <button
+                onClick={() => navigate('/login')}
+                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex items-center gap-2"
+                style={{ padding: '6px 12px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase' }}
+              >
+                Vault
+              </button>
+            )}
+
+            <div className="hidden sm:flex items-center justify-center mr-1">
+              <HeaderWifiIcon alive={backendAlive} />
+            </div>
+
+            {/* Theme Toggle */}
+            <div className={`${isMobileMenuOpen ? 'hidden sm:flex' : 'flex'} items-center gap-3 md:gap-4`}>
+              {/* Theme Toggle */}
+              <button
+                onClick={cycleTheme}
+                aria-label={`Theme: ${PREF_LABEL[preference]}. Click to change.`}
+                title={`Theme: ${PREF_LABEL[preference]}`}
+                className="flex items-center justify-center transition-all duration-200"
+                style={{ 
+                  width: '36px', 
+                  height: '36px', 
+                  border: '1px solid var(--border-default)', 
+                  background: 'var(--bg-elevated)',
+                  cursor: 'pointer'
+                }}
+              >
+                <ThemeIcon preference={preference} />
+              </button>
+
+              {/* Profile Box */}
+              {user && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center justify-center transition-all duration-200 overflow-hidden"
+                    style={{ 
+                      width: '36px', 
+                      height: '36px', 
+                      border: '1px solid var(--border-default)', 
+                      background: 'var(--bg-elevated)',
+                      cursor: 'pointer'
+                    }}
+                    aria-label="User Profile"
+                  >
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold uppercase" style={{ color: 'var(--text-primary)' }}>
+                        {(user.displayName || user.email || 'U').charAt(0)}
+                      </span>
+                    )}
+                  </button>
+
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-48 z-[60] slide-up shadow-2xl border" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)' }}>
+                      <div className="p-3 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                        <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-tertiary)' }}>Account</p>
+                        <p className="text-xs truncate font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{user.email}</p>
+                      </div>
+                      <div className="py-1">
+                        <button onClick={() => { setShowProfileMenu(false); navigate('/app'); }} className="w-full text-left px-3 py-2 text-xs hover:opacity-70 transition-opacity" style={{ color: 'var(--text-primary)' }}>Create Secret</button>
+                        <button onClick={() => { setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-xs hover:opacity-70 transition-opacity" style={{ color: 'var(--text-primary)' }}>Usage History</button>
+                        <a 
+                            href="/privacy" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="block px-3 py-2 text-xs hover:opacity-70 transition-opacity" 
+                            style={{ color: 'var(--text-primary)' }}
+                        >
+                            Privacy & Security Policy
+                        </a>
+                      </div>
+                      <div className="p-1 border-t" style={{ borderColor: 'var(--border-default)' }}>
+                        <button onClick={handleSignOut} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:opacity-70 transition-opacity">Sign Out</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Hamburger Menu */}
+            <div className="flex items-center">
+              <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="p-2 transition-colors flex items-center justify-center"
+                  style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)', width: '36px', height: '36px' }}
+                  aria-label={isMobileMenuOpen ? "Close Menu" : "Open Menu"}
+              >
+                  {isMobileMenuOpen ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="4" x2="20" y1="12" y2="12" />
+                        <line x1="4" x2="20" y1="6" y2="6" />
+                        <line x1="4" x2="20" y1="18" y2="18" />
+                    </svg>
+                  )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex flex-col slide-up pt-[73px]" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+
+              {/* Mobile Links */}
+              <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6">
+                  <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.05s' }}>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} className="block w-full py-6 text-left font-bold text-[24px] tracking-tight hover:pl-2 transition-all">
+                          How It Works
+                      </button>
+                  </div>
+                  <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.1s' }}>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/app'); }} className="block w-full py-6 text-left font-bold text-[24px] tracking-tight hover:pl-2 transition-all">
+                          Create Secret
+                      </button>
+                  </div>
+                  <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.15s' }}>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="block w-full py-6 text-left font-bold text-[24px] tracking-tight hover:pl-2 transition-all">
+                          Vault Access
+                      </button>
+                  </div>
+
+                  {user && (
+                    <div className="py-4 space-y-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
+                      <div className="text-xs uppercase tracking-wider font-semibold" style={{ color: 'var(--text-tertiary)' }}>Account</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 border flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>  
+                          {user.photoURL ? <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" /> : <span className="font-bold">{(user.displayName || user.email || 'U').charAt(0)}</span>}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold truncate max-w-[200px]">{user.displayName || 'User'}</p>
+                          <p className="text-xs truncate max-w-[200px]" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => { setIsMobileMenuOpen(false); }} className="block w-full py-2 text-left text-[15px] font-medium">Usage History</button>
+                    </div>
+                  )}
+              </div>
+
+              {/* Mobile Footer Actions */}
+              <div className="p-6 space-y-3 mt-auto" style={{ borderTop: '1px solid var(--border-default)' }}>
+                  {!user ? (
+                    <>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="w-full py-3.5 text-[15px] font-semibold transition-colors" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
+                          Sign In to Vault
+                      </button>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/signup'); }} className="w-full py-3.5 text-[15px] font-semibold transition-colors" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
+                          Create Account
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }} className="w-full py-3.5 text-[15px] font-semibold transition-colors text-red-500" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
+                        Sign Out
+                    </button>
+                  )}
+              </div>
+          </div>
+      )}
+
       {/* ── Main ── */}
-      <main className="flex-grow max-w-4xl w-full mx-auto px-6 py-8 fade-in">
+      <main className="flex-grow w-full max-w-screen-2xl mx-auto px-2 md:px-8 py-8 fade-in">    
         {children}
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="mt-auto pt-16 pb-8" style={{ borderTop: `1px solid var(--border-default)`, background: 'var(--bg-secondary)' }}>
-        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center gap-8 text-center">
-          
-          <div className="flex flex-col items-center justify-center gap-4">
-            <div className="w-32 h-32 md:w-48 md:h-48 lottie-themed">
-              <LottiePlayer
-                animationData={logolottie}
-                loop={true}
-                autoplay={true}
-              />
-            </div>
-            <div className="font-logo text-4xl md:text-5xl tracking-wide" style={{ color: 'var(--text-primary)' }}>
-              Null-Secret
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 mt-4">
-            <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-              Developed by Anurag Mishra (4nur4gmishr4)
-            </span>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
-              <button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity uppercase tracking-widest">How It Works</button>
-              <span>|</span>
-              <button onClick={() => navigate('/app')} className="hover:opacity-75 transition-opacity uppercase tracking-widest">Create Secret</button>
-              <span>|</span>
-              <button onClick={() => navigate('/privacy')} className="hover:opacity-75 transition-opacity uppercase tracking-widest">Privacy Policy</button>
-              <span>|</span>
-              <a href="mailto:anuragmishrasnag06082004@gmail.com" className="hover:opacity-75 transition-opacity uppercase tracking-widest">Contact</a>
-            </div>
-            <span className="text-[10px] mt-4" style={{ color: 'var(--text-tertiary)' }}>
-              © {new Date().getFullYear()} NULL-SECRET. All rights reserved.
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-6 mt-2">
-            <a href="https://github.com/4nur4gmishr4" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity" style={{ color: 'var(--text-secondary)' }} aria-label="GitHub">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.02c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 19 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A4.8 4.8 0 0 0 9 18v4"></path></svg>
-            </a>
-            <a href="https://www.linkedin.com/in/4nur4gmishra/" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity" style={{ color: 'var(--text-secondary)' }} aria-label="LinkedIn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
-            </a>
-            <a href="https://x.com/4nur4gmishr4" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity" style={{ color: 'var(--text-secondary)' }} aria-label="Twitter/X">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>
-            </a>
-            <a href="mailto:anuragmishrasnag06082004@gmail.com" className="hover:opacity-75 transition-opacity" style={{ color: 'var(--text-secondary)' }} aria-label="Email">
-              <Mail size={20} strokeWidth={2} />
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

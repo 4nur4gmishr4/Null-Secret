@@ -10,7 +10,7 @@ func TestStorage_StoreAndRetrieve(t *testing.T) {
 	store := NewStorage()
 	payload := []byte("test-secret-payload")
 	
-	id, err := store.Store(payload, 1, 1)
+	id, _, err := store.Store(payload, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to store secret: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestStorage_Concurrency(t *testing.T) {
 	store := NewStorage()
 	payload := []byte("concurrent-test")
 	
-	id, err := store.Store(payload, 1, 1)
+	id, _, err := store.Store(payload, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to store secret: %v", err)
 	}

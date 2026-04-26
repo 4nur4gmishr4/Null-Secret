@@ -1,23 +1,25 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"null-secret/internal/api"
 	"null-secret/internal/store"
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	s := store.NewStorage()
 	a := api.NewAPI(s)
 
-	http.HandleFunc("/api/v1/secret", a.CorsMiddleware(a.RateLimitMiddleware(a.HandleCreateSecret)))
-	http.HandleFunc("/api/v1/secret/", a.CorsMiddleware(a.RateLimitMiddleware(a.HandleGetSecret)))
-	http.HandleFunc("/healthz", a.CorsMiddleware(a.HandleHealthz))
+	router := a.SetupRoutes()
 
-	fmt.Println("NULL-SECRET API running on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf("server failed: %v\n", err)
+	slog.Info("Starting NULL-SECRET API", "port", 8080)
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		slog.Error("server failed", "error", err)
 	}
 }

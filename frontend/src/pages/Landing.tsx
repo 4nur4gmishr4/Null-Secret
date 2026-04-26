@@ -1,10 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Lottie from 'lottie-react';
+import InViewLottie from '../components/InViewLottie';
 import privacyFull from '../assets/lotties/privacyfull.json';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LottieComponent = (Lottie as any).default || Lottie;
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +10,7 @@ const Landing: React.FC = () => {
     <div className="fade-in">
       {/* ── Hero ── */}
       <section className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 py-16">
-        <div className="space-y-8 max-w-2xl mx-auto">
+        <div className="space-y-8 max-w-4xl lg:max-w-5xl mx-auto">
           {/* Tagline chip */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 glowing-border-chip">
             <span className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--text-primary)' }}>
@@ -107,21 +104,21 @@ const Landing: React.FC = () => {
       {/* ── Trust Section ── */}
       <section className="py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
-          <div className="lottie-themed w-full max-w-[280px] md:max-w-md lg:max-w-lg aspect-square flex-shrink-0 mx-auto">
-            <LottieComponent animationData={privacyFull} loop={true} />
+          <div className="lottie-themed w-full max-w-[450px] md:max-w-[600px] lg:max-w-[700px] aspect-square flex-shrink-0 mx-auto">
+            <InViewLottie animationData={privacyFull} loop={true} />
           </div>
           <div className="space-y-4 text-center md:text-left">
-            <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
               Cryptographically Enforced Privacy
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               Unlike traditional secret-sharing services, Null-Secret uses a zero-knowledge architecture. The encryption key never reaches our infrastructure — it travels only in the URL fragment, which browsers strip from network requests by design.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6 w-full">
               {['AES-256-GCM', 'PBKDF2 100K', 'Zero Logs', 'Auto Destruct'].map((tag) => (
-                <span key={tag} className="text-[10px] font-semibold tracking-wider uppercase text-center py-2 px-3" style={{ color: 'var(--text-tertiary)', border: `1px solid var(--border-default)` }}>
+                <div key={tag} className="flex items-center justify-center text-[10px] md:text-[12px] lg:text-[11px] font-bold tracking-widest uppercase text-center p-3 whitespace-normal break-words shadow-[4px_4px_0px_0px_var(--border-default)]" style={{ color: 'var(--text-primary)', border: `2px solid var(--border-default)`, background: 'var(--bg-elevated)', minHeight: '56px' }}>
                   {tag}
-                </span>
+                </div>
               ))}
             </div>
           </div>

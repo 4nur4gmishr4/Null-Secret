@@ -15,15 +15,15 @@ const ViewSecret: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const keyStr = location.hash.replace('#', '');
+  const keyStr = location.hash.replace('#', '').split('|')[0];
   const [password, setPassword] = useState('');
   const [decrypted, setDecrypted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [bundledData, setBundledData] = useState<{ p: string, i: string, s?: string, b?: boolean } | null>(null);
-  const [fileData, setFileData] = useState<{name: string, type: string, data: string} | null>(null);
-  const [views, setViews] = useState<{current: number, limit: number} | null>(null);
+  const [fileData, setFileData] = useState<{ name: string, type: string, data: string } | null>(null);
+  const [views, setViews] = useState<{ current: number, limit: number } | null>(null);
 
   const decryptBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -43,21 +43,6 @@ const ViewSecret: React.FC = () => {
       setViews({ current: data.views, limit: data.viewLimit });
       const unbundled = unbundle(data.payload);
       setBundledData(unbundled);
-
-      if (unbundled.b) {
-        try {
-          const challenge = new Uint8Array(32);
-          window.crypto.getRandomValues(challenge);
-          await navigator.credentials.get({
-            publicKey: {
-              challenge,
-              userVerification: 'required',
-            }
-          });
-        } catch {
-          throw new Error('Biometric authentication failed or cancelled.');
-        }
-      }
 
       if (unbundled.s) {
         setNeedsPassword(true);
@@ -104,8 +89,8 @@ const ViewSecret: React.FC = () => {
   // Loading state
   if (loading && !needsPassword) {
     return (
-      <div className="max-w-2xl mx-auto flex flex-col items-center justify-center py-24 space-y-6 slide-up" aria-live="polite">
-        <div className="lottie-themed w-28 h-28">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto flex flex-col items-center justify-center py-24 space-y-6 slide-up" aria-live="polite">
+        <div className="lottie-themed w-48 h-48 md:w-64 md:h-64">
           <LottieComponent animationData={shieldAnimation} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
@@ -118,9 +103,9 @@ const ViewSecret: React.FC = () => {
   // Error state
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6 slide-up" role="alert" aria-live="assertive">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" role="alert" aria-live="assertive">
         <div className="flex flex-col items-center text-center py-8 space-y-6">
-          <div className="lottie-themed w-24 h-24">
+          <div className="lottie-themed w-32 h-32 md:w-48 md:h-48">
             <LottieComponent animationData={redSecurity} loop={true} />
           </div>
           <div className="space-y-2">
@@ -150,7 +135,7 @@ const ViewSecret: React.FC = () => {
   // Decrypted view
   if (decrypted !== null) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6 slide-up" aria-live="polite">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" aria-live="polite">
         <div className="space-y-2 mb-8">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: 'var(--surface-success)', border: `1px solid var(--text-success)` }}>
@@ -217,9 +202,9 @@ const ViewSecret: React.FC = () => {
   // Password prompt
   if (needsPassword) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6 slide-up" aria-live="polite">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" aria-live="polite">
         <div className="flex flex-col items-center text-center py-8 space-y-4">
-          <div className="lottie-themed w-32 h-32 md:w-48 md:h-48">
+          <div className="lottie-themed w-40 h-40 md:w-64 md:h-64">
             <LottieComponent animationData={privacyLock} loop={true} />
           </div>
           <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
@@ -252,8 +237,8 @@ const ViewSecret: React.FC = () => {
 
   // Initial gate
   return (
-    <div className="max-w-2xl mx-auto space-y-6 text-center py-12 slide-up">
-      <div className="lottie-themed w-24 h-24 mx-auto mb-4">
+    <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 text-center py-12 slide-up">
+      <div className="lottie-themed w-40 h-40 md:w-64 md:h-64 mx-auto mb-4">
         <LottieComponent animationData={privacyLock} loop={true} />
       </div>
       <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
