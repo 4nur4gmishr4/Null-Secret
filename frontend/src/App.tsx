@@ -8,7 +8,11 @@ const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
 const Success = React.lazy(() => import('./pages/Success'));
 const ViewSecret = React.lazy(() => import('./pages/ViewSecret'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
+const Authscreen = React.lazy(() => import('./components/Authscreen'));
+const Signup = React.lazy(() => import('./components/Signup'));
+const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
 
 const NotFound: React.FC = () => (
   <div className="text-center py-24 space-y-4 slide-up">
@@ -29,14 +33,24 @@ const NotFound: React.FC = () => (
 const App: React.FC = () => {
   const [preloaderDone, setPreloaderDone] = useState(false);
 
+  const handlePreloaderComplete = React.useCallback(() => {
+    setPreloaderDone(true);
+  }, []);
+
   return (
     <ThemeProvider>
-      {!preloaderDone && <Preloader onComplete={() => setPreloaderDone(true)} />}
+      {!preloaderDone && <Preloader onComplete={handlePreloaderComplete} />}
       <Router>
         <Layout>
           <Suspense fallback={
-            <div className="py-20 text-center text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-              Loading…
+            <div className="py-24 flex flex-col items-center justify-center space-y-4">
+              <svg className="animate-spin h-6 w-6" style={{ color: 'var(--text-primary)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <div className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
+                Loading…
+              </div>
             </div>
           }>
             <Routes>
@@ -44,7 +58,11 @@ const App: React.FC = () => {
               <Route path="/app" element={<Home />} />
               <Route path="/s/:id" element={<Success />} />
               <Route path="/v/:id" element={<ViewSecret />} />
+              <Route path="/admin/:id" element={<AdminDashboard />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/login" element={<Authscreen />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

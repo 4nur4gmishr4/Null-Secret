@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"null-secret/internal/models"
@@ -28,15 +29,29 @@ func (rl *RateLimiter) Allow(ip string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	// SEC-04: Cap number of tracked IPs to prevent OOM
-	if len(rl.hits) > 10000 {
-		if _, ok := rl.hits[ip]; !ok {
-			rl.hits = make(map[string][]time.Time)
-		}
-	}
-
 	now := time.Now()
 	window := now.Add(-1 * time.Minute)
+
+	if len(rl.hits) > 10000 {
+		if _, exists := rl.hits[ip]; !exists {
+			freedSpace := false
+			scanCount := 0
+			for trackIP, hits := range rl.hits {
+				if len(hits) == 0 || hits[len(hits)-1].Before(window) {
+					delete(rl.hits, trackIP)
+					freedSpace = true
+					break
+				}
+				scanCount++
+				if scanCount > 100 {
+					break
+				}
+			}
+			if !freedSpace {
+				return false
+			}
+		}
+	}
 
 	var validHits []time.Time
 	for _, t := range rl.hits[ip] {
@@ -79,9 +94,12 @@ func (rl *RateLimiter) cleanup() {
 }
 
 type Storage struct {
-	shards  [256]*Shard
-	Limiter *RateLimiter
+	shards     [256]*Shard
+	Limiter    *RateLimiter
+	totalBytes atomic.Int64
 }
+
+const maxGlobalBytes int64 = 250 * 1024 * 1024 // 250 MB
 
 func NewStorage() *Storage {
 	s := &Storage{
@@ -114,13 +132,32 @@ func generateID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string, error) {
+func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string, string, error) {
+	payloadLen := int64(len(payload))
+
+	// Enforce strict 10MB payload size limit at storage layer
+	if payloadLen > 10*1024*1024 {
+		return "", "", errors.New("payload exceeds maximum allowed size (10MB)")
+	}
+
+	if s.totalBytes.Add(payloadLen) > maxGlobalBytes {
+		s.totalBytes.Add(-payloadLen) // Revert
+		return "", "", ErrCapacityExceeded
+	}
+
 	id, err := generateID()
 	if err != nil {
-		return "", err
+		s.totalBytes.Add(-payloadLen) // Revert
+		return "", "", err
+	}
+	adminKey, err := generateID()
+	if err != nil {
+		s.totalBytes.Add(-payloadLen) // Revert
+		return "", "", err
 	}
 	secret := &models.Secret{
 		ID:        id,
+		AdminKey:  adminKey,
 		Payload:   payload,
 		ExpiresAt: time.Now().Add(time.Duration(expiryHours) * time.Hour),
 		ViewLimit: viewLimit,
@@ -130,7 +167,7 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 	shard := s.getShard(id)
 	shard.mu.Lock()
 	
-	// Prevent OOM
+	// Prevent OOM per shard
 	if len(shard.secrets) >= maxSecretsPerShard {
 		shard.mu.Unlock()
 		s.gcShard(shard) // try to free space
@@ -138,14 +175,47 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 		shard.mu.Lock()
 		if len(shard.secrets) >= maxSecretsPerShard {
 			shard.mu.Unlock()
-			return "", ErrCapacityExceeded
+			s.totalBytes.Add(-payloadLen) // Revert
+			return "", "", ErrCapacityExceeded
 		}
 	}
 	
 	shard.secrets[id] = secret
 	shard.mu.Unlock()
 
-	return id, nil
+	return id, adminKey, nil
+}
+
+func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoResponse, bool) {
+	shard := s.getShard(id)
+	shard.mu.RLock()
+	defer shard.mu.RUnlock()
+
+	secret, ok := shard.secrets[id]
+	if !ok || secret.AdminKey != adminKey {
+		return nil, false
+	}
+
+	return &models.SecretInfoResponse{
+		Views:     secret.Views,
+		ViewLimit: secret.ViewLimit,
+		ExpiresAt: secret.ExpiresAt,
+	}, true
+}
+
+func (s *Storage) Burn(id string, adminKey string) bool {
+	shard := s.getShard(id)
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
+
+	secret, ok := shard.secrets[id]
+	if !ok || secret.AdminKey != adminKey {
+		return false
+	}
+
+	s.totalBytes.Add(-int64(len(secret.Payload)))
+	delete(shard.secrets, id)
+	return true
 }
 
 func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, bool) {
@@ -159,6 +229,7 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, bool) {
 	}
 
 	if time.Now().After(secret.ExpiresAt) {
+		s.totalBytes.Add(-int64(len(secret.Payload)))
 		delete(shard.secrets, id)
 		return nil, false
 	}
@@ -174,6 +245,7 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, bool) {
 	}
 
 	if secret.Views >= secret.ViewLimit {
+		s.totalBytes.Add(-int64(len(secret.Payload)))
 		delete(shard.secrets, id)
 	}
 
@@ -186,6 +258,7 @@ func (s *Storage) gcShard(shard *Shard) {
 	now := time.Now()
 	for id, secret := range shard.secrets {
 		if now.After(secret.ExpiresAt) {
+			s.totalBytes.Add(-int64(len(secret.Payload)))
 			delete(shard.secrets, id)
 		}
 	}

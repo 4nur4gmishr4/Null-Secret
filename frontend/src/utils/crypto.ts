@@ -148,10 +148,10 @@ export async function decrypt(payloadStr: string, ivStr: string, key: CryptoKey)
   return unpad(paddedJson);
 }
 
-export function bundle(payload: string, iv: string, salt?: string, biometric?: boolean): string {
-  return btoa(JSON.stringify({ p: payload, i: iv, s: salt, b: biometric }));
+export function bundle(payload: string, iv: string, salt?: string): string {
+  return btoa(JSON.stringify({ p: payload, i: iv, s: salt }));
 }
 
-export function unbundle(bundled: string): { p: string; i: string; s?: string; b?: boolean } {
+export function unbundle(bundled: string): { p: string; i: string; s?: string } {
   return JSON.parse(atob(bundled));
 }

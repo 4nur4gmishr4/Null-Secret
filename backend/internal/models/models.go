@@ -4,6 +4,7 @@ import "time"
 
 type Secret struct {
 	ID        string    `json:"id"`
+	AdminKey  string    `json:"-"`
 	Payload   []byte    `json:"payload"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	ViewLimit int       `json:"viewLimit"`
@@ -17,13 +18,20 @@ type CreateSecretRequest struct {
 }
 
 type CreateSecretResponse struct {
-	ID string `json:"id"`
+	ID       string `json:"id"`
+	AdminKey string `json:"adminKey"`
 }
 
 type GetSecretResponse struct {
 	Payload   []byte `json:"payload"`
 	Views     int    `json:"views"`
 	ViewLimit int    `json:"viewLimit"`
+}
+
+type SecretInfoResponse struct {
+	Views     int       `json:"views"`
+	ViewLimit int       `json:"viewLimit"`
+	ExpiresAt time.Time `json:"expiresAt"`
 }
 
 type ErrorResponse struct {

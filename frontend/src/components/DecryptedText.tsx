@@ -48,7 +48,7 @@ const DecryptedText: React.FC<DecryptedTextProps> = ({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [text, speed, maxIterations, trigger, onComplete]);
+  }, [text, speed, maxIterations, trigger]);
 
   return <span className={className}>{displayText}</span>;
 };

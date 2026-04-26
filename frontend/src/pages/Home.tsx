@@ -7,6 +7,8 @@ import shieldAnimation from '../assets/lotties/shield-morph.json';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const LottieComponent = (Lottie as any).default || Lottie;
 
+import { zipSync } from 'fflate';
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
 
 const Home: React.FC = () => {
@@ -14,16 +16,24 @@ const Home: React.FC = () => {
   const [password, setPassword] = useState('');
   const [expiry, setExpiry] = useState('24');
   const [viewLimit, setViewLimit] = useState('1');
-  const [file, setFile] = useState<File | null>(null);
-  const [requireBiometric, setRequireBiometric] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const securityStrength = Math.min((text.length / 500) * 100, 100);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
+    }
+  };
+
   const handleCreate = async () => {
-    if (!text) return;
+    if (!text && files.length === 0) {
+      setError('Please enter a message or attach a file.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -39,26 +49,47 @@ const Home: React.FC = () => {
       const keyStr = await exportKey(key);
 
       let plaintext = text;
-      if (file) {
-         if (file.size > 4 * 1024 * 1024) {
-           setError('File size exceeds the 4 MB limit.');
-           setLoading(false);
-           return;
-         }
-         const reader = new FileReader();
-         const fileBase64 = await new Promise<string>((resolve, reject) => {
+      if (files.length > 0) {
+        let totalSize = 0;
+        const zipObj: Record<string, Uint8Array> = {};
+        for (const f of files) {
+          totalSize += f.size;
+          if (totalSize > 6 * 1024 * 1024) throw new Error('Total files must be smaller than 6MB');
+          const buffer = await f.arrayBuffer();
+          zipObj[f.name] = new Uint8Array(buffer);
+        }
+
+        let fileData;
+        if (files.length === 1) {
+          // Single file, no need to zip
+          const reader = new FileReader();
+          const fileBase64 = await new Promise<string>((resolve, reject) => {
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
             reader.onerror = reject;
-            reader.readAsDataURL(file);
-         });
-         plaintext = JSON.stringify({
-            text: text,
-            file: { name: file.name, type: file.type, data: `data:${file.type || 'application/octet-stream'};base64,${fileBase64}` }
-         });
+            reader.readAsDataURL(files[0]);
+          });
+          fileData = { name: files[0].name, type: files[0].type, data: `data:${files[0].type || 'application/octet-stream'};base64,${fileBase64}` };
+        } else {
+          // Multi file zip
+          const zipped = zipSync(zipObj);
+          const blob = new Blob([zipped as any], { type: 'application/zip' });
+          const reader = new FileReader();
+          const zipBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          fileData = { name: 'secure_attachments.zip', type: 'application/zip', data: `data:application/zip;base64,${zipBase64}` };
+        }
+
+        plaintext = JSON.stringify({
+          text: text,
+          file: fileData
+        });
       }
 
       const { payload, iv } = await encrypt(plaintext, key);
-      const bundled = bundle(payload, iv, saltStr, requireBiometric);
+      const bundled = bundle(payload, iv, saltStr);
 
       const resp = await fetch(`${API_BASE}/secret`, {
         method: 'POST',
@@ -74,7 +105,7 @@ const Home: React.FC = () => {
 
       const data = await resp.json();
       if (data.id) {
-        navigate(`/s/${data.id}#${keyStr}`);
+        navigate(`/s/${data.id}#${keyStr}`, { state: { adminKey: data.adminKey } });
       }
     } catch (err: unknown) {
       console.error(err);
@@ -92,7 +123,7 @@ const Home: React.FC = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-6 slide-up" aria-live="polite">
-        <div className="lottie-themed w-28 h-28">
+        <div className="lottie-themed w-48 h-48 md:w-64 md:h-64">
           <LottieComponent animationData={shieldAnimation} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
@@ -103,7 +134,7 @@ const Home: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 slide-up">
+    <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up">
       {/* Page Header */}
       <div className="space-y-2 mb-8">
         <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
@@ -125,9 +156,9 @@ const Home: React.FC = () => {
           <span>{error}</span>
           <button
             onClick={() => setError(null)}
-            className="ml-auto hover:opacity-70 transition-opacity"
+            className="ml-auto hover:opacity-70 transition-opacity flex items-center justify-center"
             aria-label="Dismiss"
-            style={{ border: 'none', background: 'none', color: 'var(--text-danger)', padding: '2px' }}
+            style={{ border: 'none', background: 'none', color: 'var(--text-danger)', padding: '12px', minWidth: '44px', minHeight: '44px' }}
           >
             ✕
           </button>
@@ -157,14 +188,22 @@ const Home: React.FC = () => {
 
       {/* File Upload */}
       <div className="space-y-2">
-        <label htmlFor="file-upload" className="label block">Attach file (max 4 MB)</label>
-        <input
-          id="file-upload"
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="w-full p-3 text-xs font-medium focus:outline-none cursor-pointer"
-          style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
-        />
+        <label htmlFor="file-upload" className="label block">Attach files (max 6 MB total)</label>
+        <div className="relative">
+          <input
+            id="file-upload"
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            className="w-full p-3 text-xs font-medium focus:outline-none cursor-pointer"
+            style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
+          />
+          {files.length > 0 && (
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>
+              {files.length} file(s)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Settings Grid */}
@@ -213,25 +252,10 @@ const Home: React.FC = () => {
         />
       </div>
 
-      {/* Biometric */}
-      <div className="flex items-center gap-3 p-3" style={{ background: 'var(--bg-secondary)', border: `1px solid var(--border-default)` }}>
-        <input
-          id="biometric-check"
-          type="checkbox"
-          checked={requireBiometric}
-          onChange={(e) => setRequireBiometric(e.target.checked)}
-          className="w-4 h-4 flex-shrink-0"
-          style={{ borderColor: 'var(--border-strong)', accentColor: 'var(--accent)' }}
-        />
-        <label htmlFor="biometric-check" className="text-xs font-medium cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
-          Require device biometrics to decrypt (FaceID / TouchID / Windows Hello)
-        </label>
-      </div>
-
       {/* Submit */}
       <button
         onClick={handleCreate}
-        disabled={loading || (!text && !file)}
+        disabled={loading || (text === '' && files.length === 0)}
         className="btn btn-primary w-full text-xs tracking-widest uppercase"
         style={{ padding: '16px 24px' }}
       >

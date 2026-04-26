@@ -4,7 +4,7 @@ import shieldAnimation from '../assets/lotties/shield-morph.json';
 import DecryptedText from './DecryptedText';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LottiePlayer = (Lottie as any).default || Lottie;
+const LottieComponent = (Lottie as any).default || Lottie;
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -42,19 +42,19 @@ export default function Preloader({ onComplete }: PreloaderProps) {
 
       {/* Centered content */}
       <div className={`preloader-content ${phase === 'exit' ? 'preloader-fade-out' : ''}`}>
-        <div className="preloader-lottie">
-          <LottiePlayer
+        <div className="w-32 h-32 mb-6 preloader-lottie">
+          <LottieComponent
             animationData={shieldAnimation}
             loop={false}
             autoplay={true}
           />
         </div>
         <div 
-          className="preloader-text text-center"
-          style={{ minWidth: '220px' }}
+          className="font-logo text-sm tracking-[0.2em] uppercase text-center"
+          style={{ color: 'var(--bg-primary)', minWidth: '220px' }}
         >
           <DecryptedText 
-            text="NULL-SECRET" 
+            text="Null-Secret" 
             speed={25} 
             maxIterations={6} 
             onComplete={handleDecryptionComplete} 
