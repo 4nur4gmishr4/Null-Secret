@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
 import { generateKey, deriveKeyFromPassword, exportKey, encrypt, bundle } from '../utils/crypto';
 import shieldAnimation from '../assets/lotties/shield-morph.json';
+import { auth, db } from '../utils/firebase';
+import { 
+  doc, 
+  runTransaction, 
+  serverTimestamp, 
+  collection, 
+  addDoc 
+} from 'firebase/firestore';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const LottieComponent = (Lottie as any).default || Lottie;
@@ -34,9 +42,65 @@ const Home: React.FC = () => {
       setError('Please enter a message or attach a file.');
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
+      const user = auth.currentUser;
+      const today = new Date().toISOString().split('T')[0];
+
+      // CRITICAL: Double-check limit before encryption
+      // This prevents bypass if the button is manually re-enabled via console
+      try {
+        if (user) {
+          // Firebase Transaction for Authenticated Users
+          const usageRef = doc(db, 'usage', user.uid, 'daily', today);
+          
+          await runTransaction(db, async (transaction) => {
+            const usageSnap = await transaction.get(usageRef);
+            let count = 0;
+            if (usageSnap.exists()) {
+              count = usageSnap.data().count;
+            }
+
+            if (count >= 30) {
+              throw new Error('LIMIT_EXCEEDED');
+            }
+
+            if (!usageSnap.exists()) {
+              transaction.set(usageRef, { count: 1 });
+            } else {
+              transaction.update(usageRef, { count: count + 1 });
+            }
+          });
+        } else {
+          // Local Storage Fallback for Guests
+          const usageData = localStorage.getItem('ns_usage');
+          let count = 0;
+          if (usageData) {
+            const { date, currentCount } = JSON.parse(usageData);
+            if (date === today) count = currentCount;
+          }
+
+          if (count >= 30) {
+            throw new Error('LIMIT_EXCEEDED');
+          }
+          
+          localStorage.setItem('ns_usage', JSON.stringify({ date: today, currentCount: count + 1 }));
+        }
+      } catch (usageErr: any) {
+        if (usageErr.message === 'LIMIT_EXCEEDED') throw usageErr;
+        // Handle Firestore API disabled or network error
+        console.error('Usage tracking failed', usageErr);
+        if (usageErr.code === 'permission-denied') {
+          throw new Error('INFRASTRUCTURE_ERROR');
+        }
+        // If not a limit error, we might want to block anyway for security
+        throw new Error('SECURITY_CHECK_FAILED');
+      }
+
+      // Proceed with Encryption
       let key = await generateKey();
       let saltStr: string | undefined;
 
@@ -61,7 +125,6 @@ const Home: React.FC = () => {
 
         let fileData;
         if (files.length === 1) {
-          // Single file, no need to zip
           const reader = new FileReader();
           const fileBase64 = await new Promise<string>((resolve, reject) => {
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -70,7 +133,6 @@ const Home: React.FC = () => {
           });
           fileData = { name: files[0].name, type: files[0].type, data: `data:${files[0].type || 'application/octet-stream'};base64,${fileBase64}` };
         } else {
-          // Multi file zip
           const zipped = zipSync(zipObj);
           const blob = new Blob([zipped as any], { type: 'application/zip' });
           const reader = new FileReader();
@@ -105,11 +167,28 @@ const Home: React.FC = () => {
 
       const data = await resp.json();
       if (data.id) {
+        // Log to History if authenticated
+        if (user) {
+          try {
+            await addDoc(collection(db, 'users', user.uid, 'history'), {
+              id: data.id,
+              createdAt: serverTimestamp()
+            });
+          } catch (e) {
+            console.error('History log failed', e);
+          }
+        }
         navigate(`/s/${data.id}#${keyStr}`, { state: { adminKey: data.adminKey } });
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error(err);
-      if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
+      if (err.message === 'LIMIT_EXCEEDED') {
+        setError('Daily security quota reached (30/30). System lockdown active until 00:00 UTC reset.');
+      } else if (err.message === 'INFRASTRUCTURE_ERROR') {
+        setError('Infrastructure Error: The security governance API is currently unreachable. Please ensure Firestore is enabled in your Firebase console.');
+      } else if (err.message === 'SECURITY_CHECK_FAILED') {
+        setError('Security Check Failed: We could not verify your usage quota. Action blocked for system integrity.');
+      } else if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
         setError('Cryptography API requires a secure context (HTTPS or localhost).');
       } else {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
