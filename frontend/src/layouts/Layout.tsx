@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
@@ -127,6 +127,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     navigate('/');
   };
 
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileMenu]);
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -185,12 +199,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   animationData={logolottie}
                   loop={true}
                   autoplay={true}
-                  rendererSettings={{
-                    preserveAspectRatio: 'xMidYMid slice',
-                    progressiveLoad: true,
-                    hideOnTransparent: true,
-                    className: 'lottie-no-delay'
-                  }}
                 />
               </div>
               <div className="font-logo text-base md:text-xl tracking-wide flex items-center ml-4 md:ml-6" style={{ color: 'var(--text-primary)' }}>
@@ -236,7 +244,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
 
             {/* Theme Toggle */}
-            <div className={`${isMobileMenuOpen ? 'hidden sm:flex' : 'flex'} items-center gap-3 md:gap-4`}>
+            <div className={`${isMobileMenuOpen ? 'hidden' : 'flex'} items-center gap-3 md:gap-4`}>
               {/* Theme Toggle */}
               <button
                 onClick={cycleTheme}
@@ -255,55 +263,80 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </button>
 
               {/* Profile Box */}
-              {user && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                    className="flex items-center justify-center transition-all duration-200 overflow-hidden"
-                    style={{ 
-                      width: '36px', 
-                      height: '36px', 
-                      border: '1px solid var(--border-default)', 
-                      background: 'var(--bg-elevated)',
-                      cursor: 'pointer'
-                    }}
-                    aria-label="User Profile"
-                  >
-                    {user.photoURL ? (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center justify-center transition-all duration-200 overflow-hidden"
+                  style={{ 
+                    width: '36px', 
+                    height: '36px', 
+                    border: '1px solid var(--border-default)', 
+                    background: 'var(--bg-elevated)',
+                    cursor: 'pointer'
+                  }}
+                  aria-label="User Profile"
+                >
+                  {user ? (
+                    user.photoURL ? (
                       <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-xs font-bold uppercase" style={{ color: 'var(--text-primary)' }}>
                         {(user.displayName || user.email || 'U').charAt(0)}
                       </span>
-                    )}
-                  </button>
+                    )
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  )}
+                </button>
 
-                  {showProfileMenu && (
-                    <div className="absolute right-0 mt-2 w-48 z-[60] slide-up shadow-2xl border" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)' }}>
-                      <div className="p-3 border-b" style={{ borderColor: 'var(--border-default)' }}>
-                        <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-tertiary)' }}>Account</p>
-                        <p className="text-xs truncate font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{user.email}</p>
-                      </div>
-                      <div className="py-1">
-                        <button onClick={() => { setShowProfileMenu(false); navigate('/app'); }} className="w-full text-left px-3 py-2 text-xs hover:opacity-70 transition-opacity" style={{ color: 'var(--text-primary)' }}>Create Secret</button>
-                        <button onClick={() => { setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-xs hover:opacity-70 transition-opacity" style={{ color: 'var(--text-primary)' }}>Usage History</button>
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-56 z-[80] slide-up shadow-2xl border" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)', right: '0' }}>
+                    {user ? (
+                      <>
+                        <div className="p-4 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                          <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Active Account</p>
+                          <p className="text-xs font-bold mt-1 break-all" style={{ color: 'var(--text-primary)' }}>{user.email}</p>
+                        </div>
+                        <div className="py-1">
+                          <button onClick={() => { setShowProfileMenu(false); navigate('/app'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Create New Secret</button>
+                          <button onClick={() => { setShowProfileMenu(false); navigate('/history'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Usage History</button>
+                          <button onClick={() => { setShowProfileMenu(false); navigate('/security'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Security Settings</button>
+                          <a 
+                              href="/privacy" 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="block px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" 
+                              style={{ color: 'var(--text-primary)' }}
+                          >
+                              Privacy Manifesto
+                          </a>
+                        </div>
+                        <div className="p-1 border-t" style={{ borderColor: 'var(--border-default)' }}>
+                          <button onClick={handleSignOut} className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-500/5 transition-colors">Sign Out</button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-2 space-y-1">
+                        <button onClick={() => { setShowProfileMenu(false); navigate('/login'); }} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Sign In</button>
+                        <button onClick={() => { setShowProfileMenu(false); navigate('/signup'); }} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Create Account</button>
+                        <div className="border-t my-1" style={{ borderColor: 'var(--border-default)' }} />
                         <a 
                             href="/privacy" 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="block px-3 py-2 text-xs hover:opacity-70 transition-opacity" 
+                            className="block px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" 
                             style={{ color: 'var(--text-primary)' }}
                         >
-                            Privacy & Security Policy
+                            Privacy Manifesto
                         </a>
                       </div>
-                      <div className="p-1 border-t" style={{ borderColor: 'var(--border-default)' }}>
-                        <button onClick={handleSignOut} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:opacity-70 transition-opacity">Sign Out</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Hamburger Menu */}
@@ -337,53 +370,55 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="fixed inset-0 z-50 flex flex-col slide-up pt-[73px]" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
 
               {/* Mobile Links */}
-              <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6">
+              <div className="flex-1 overflow-y-auto px-6 py-12 space-y-8">
                   <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.05s' }}>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} className="block w-full py-6 text-left font-bold text-[24px] tracking-tight hover:pl-2 transition-all">
-                          How It Works
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} className="block w-full py-8 text-left font-bold text-[32px] tracking-tight hover:pl-2 transition-all">
+                          Home
                       </button>
                   </div>
                   <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.1s' }}>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/app'); }} className="block w-full py-6 text-left font-bold text-[24px] tracking-tight hover:pl-2 transition-all">
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/app'); }} className="block w-full py-8 text-left font-bold text-[32px] tracking-tight hover:pl-2 transition-all">
                           Create Secret
                       </button>
                   </div>
                   <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.15s' }}>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="block w-full py-6 text-left font-bold text-[24px] tracking-tight hover:pl-2 transition-all">
-                          Vault Access
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="block w-full py-8 text-left font-bold text-[32px] tracking-tight hover:pl-2 transition-all">
+                          Vault
                       </button>
-                  </div>
-
-                  {user && (
-                    <div className="py-4 space-y-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
-                      <div className="text-xs uppercase tracking-wider font-semibold" style={{ color: 'var(--text-tertiary)' }}>Account</div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 border flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>  
-                          {user.photoURL ? <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" /> : <span className="font-bold">{(user.displayName || user.email || 'U').charAt(0)}</span>}
+                                    {user && (
+                    <div className="py-8 space-y-6 border-t" style={{ borderColor: 'var(--border-default)' }}>
+                      <div className="text-[11px] uppercase tracking-[0.3em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Account Details</div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 border flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>  
+                          {user.photoURL ? <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-xl font-bold">{(user.displayName || user.email || 'U').charAt(0)}</span>}
                         </div>
-                        <div>
-                          <p className="text-sm font-bold truncate max-w-[200px]">{user.displayName || 'User'}</p>
-                          <p className="text-xs truncate max-w-[200px]" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
+                        <div className="space-y-1">
+                          <p className="text-lg font-bold tracking-tight">{user.displayName || 'User'}</p>
+                          <p className="text-xs break-all" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
                         </div>
                       </div>
-                      <button onClick={() => { setIsMobileMenuOpen(false); }} className="block w-full py-2 text-left text-[15px] font-medium">Usage History</button>
+                      <div className="grid grid-cols-1 gap-4 pt-4">
+                          <button onClick={() => { setIsMobileMenuOpen(false); navigate('/history'); }} className="block w-full py-4 text-left text-base font-bold border-b" style={{ borderColor: 'var(--border-default)' }}>Usage History</button>
+                          <button onClick={() => { setIsMobileMenuOpen(false); navigate('/security'); }} className="block w-full py-4 text-left text-base font-bold border-b" style={{ borderColor: 'var(--border-default)' }}>Security Settings</button>
+                      </div>
                     </div>
                   )}
-              </div>
+                </div>
+        </div>
 
               {/* Mobile Footer Actions */}
-              <div className="p-6 space-y-3 mt-auto" style={{ borderTop: '1px solid var(--border-default)' }}>
+              <div className="p-6 space-y-4 mt-auto" style={{ borderTop: '1px solid var(--border-default)' }}>
                   {!user ? (
                     <>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="w-full py-3.5 text-[15px] font-semibold transition-colors" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="w-full py-4 text-base font-bold transition-colors" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
                           Sign In to Vault
                       </button>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/signup'); }} className="w-full py-3.5 text-[15px] font-semibold transition-colors" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
+                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/signup'); }} className="w-full py-4 text-base font-bold transition-colors" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
                           Create Account
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }} className="w-full py-3.5 text-[15px] font-semibold transition-colors text-red-500" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
+                    <button onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }} className="w-full py-4 text-base font-bold transition-colors text-red-500" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
                         Sign Out
                     </button>
                   )}
