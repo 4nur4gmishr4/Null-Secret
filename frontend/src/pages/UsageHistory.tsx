@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
 import historyLottie from '../assets/lotties/privacylock.json';
 import { auth, db } from '../utils/firebase';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 interface HistoryItem {
@@ -14,12 +14,23 @@ interface HistoryItem {
 const UsageHistory: React.FC = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [dailyCount, setDailyCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Fetch Daily Quota
+          const usageRef = doc(db, 'usage', user.uid, 'daily', today);
+          const usageSnap = await getDoc(usageRef);
+          if (usageSnap.exists()) {
+            setDailyCount(usageSnap.data().count || 0);
+          }
+
+          // Fetch History Log
           const q = query(
             collection(db, 'users', user.uid, 'history'),
             orderBy('createdAt', 'desc')
@@ -31,7 +42,7 @@ const UsageHistory: React.FC = () => {
           }));
           setHistory(items);
         } catch (error) {
-          console.error("Error fetching history:", error);
+          console.error("Error fetching usage data:", error);
         } finally {
           setLoading(false);
         }
@@ -60,6 +71,18 @@ const UsageHistory: React.FC = () => {
           <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
             Track your ephemeral footprint. Remember: Null-Secret never stores the content of your messages, only the minimal proof of your encrypted actions.
           </p>
+        </div>
+        <div className="ml-auto flex flex-col items-center md:items-end gap-2">
+          <div className="p-6 border flex flex-col items-center md:items-end justify-center min-w-[200px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-secondary)' }}>
+            <p className="text-[9px] uppercase tracking-[0.3em] font-bold mb-1" style={{ color: 'var(--text-tertiary)' }}>Security Quota</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>{dailyCount}</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-tertiary)' }}>/ 30</span>
+            </div>
+            <p className="text-[10px] font-bold mt-2 uppercase tracking-widest" style={{ color: dailyCount >= 30 ? 'var(--text-danger)' : 'var(--text-success)' }}>
+              {dailyCount >= 30 ? 'Limit Reached' : 'Secure Actions Used'}
+            </p>
+          </div>
         </div>
       </div>
 
