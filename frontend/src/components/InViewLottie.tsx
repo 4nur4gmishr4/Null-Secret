@@ -1,18 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
-import Lottie from 'lottie-react';
+import LottieView from './LottieView';
 
-// Handle lottie-react default/named export differences across environments
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LottieComponent = (Lottie as any).default || Lottie;
+type LottieRendererSettings = Record<string, unknown>;
 
 interface InViewLottieProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  animationData: any;
+  /** Opaque animation JSON consumed by lottie-react; treated as unknown. */
+  animationData: unknown;
   loop?: boolean;
   className?: string;
   autoplay?: boolean;
   style?: React.CSSProperties;
-  rendererSettings?: any;
+  rendererSettings?: LottieRendererSettings;
 }
 
 /**
@@ -73,9 +71,9 @@ function InViewLottie({
         ...style 
       }}
     >
-      <LottieComponent 
-        animationData={animationData} 
-        loop={loop} 
+      <LottieView
+        animationData={animationData}
+        loop={loop}
         autoplay={isInView && autoplay}
         rendererSettings={defaultRendererSettings}
         style={{ width: '100%', height: '100%', ...style }}
