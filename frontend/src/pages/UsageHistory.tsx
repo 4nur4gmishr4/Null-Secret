@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Lottie from 'lottie-react';
+import LottieView from '../components/LottieView';
 import historyLottie from '../assets/lotties/privacylock.json';
 import { auth, db } from '../utils/firebase';
-import { collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc, type Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { DAILY_SECRET_LIMIT } from '../utils/constants';
+import { buildCsv, downloadCsv } from '../utils/csv';
 
 interface HistoryItem {
   id: string;
-  createdAt: any;
+  createdAt: Timestamp | null;
 }
 
 const UsageHistory: React.FC = () => {
@@ -18,69 +20,91 @@ const UsageHistory: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          
-          // Fetch Daily Quota
-          const usageRef = doc(db, 'usage', user.uid, 'daily', today);
-          const usageSnap = await getDoc(usageRef);
-          if (usageSnap.exists()) {
-            setDailyCount(usageSnap.data().count || 0);
-          }
+    let cancelled = false;
 
-          // Fetch History Log
-          const q = query(
-            collection(db, 'users', user.uid, 'history'),
-            orderBy('createdAt', 'desc')
-          );
-          const querySnapshot = await getDocs(q);
-          const items = querySnapshot.docs.map(doc => ({
-            id: doc.data().id,
-            createdAt: doc.data().createdAt
-          }));
-          setHistory(items);
-        } catch (error) {
-          console.error("Error fetching usage data:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
         navigate('/login');
+        return;
+      }
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Fetch Daily Quota
+        const usageRef = doc(db, 'usage', user.uid, 'daily', today);
+        const usageSnap = await getDoc(usageRef);
+        if (cancelled) return;
+        if (usageSnap.exists()) {
+          const data = usageSnap.data() as { count?: number };
+          setDailyCount(typeof data.count === 'number' ? data.count : 0);
+        }
+
+        // Fetch History Log
+        const q = query(
+          collection(db, 'users', user.uid, 'history'),
+          orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        if (cancelled) return;
+        const items: HistoryItem[] = querySnapshot.docs.map(snapshot => {
+          const data = snapshot.data() as { id?: string; createdAt?: Timestamp };
+          return {
+            id: typeof data.id === 'string' ? data.id : snapshot.id,
+            createdAt: data.createdAt ?? null,
+          };
+        });
+        setHistory(items);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error fetching usage data:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [navigate]);
 
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: Timestamp | null): string => {
     if (!timestamp) return '...';
-    const date = timestamp.toDate();
-    return date.toLocaleString();
+    return timestamp.toDate().toLocaleString();
   };
 
+  const handleExportCsv = useCallback(() => {
+    if (history.length === 0) return;
+    const rows = history.map((item) => [
+      item.id,
+      item.createdAt ? item.createdAt.toDate().toISOString() : '',
+    ]);
+    const csv = buildCsv(['secret_id', 'created_at_iso8601'], rows);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadCsv(`null-secret-history-${stamp}.csv`, csv);
+  }, [history]);
+
   return (
-    <div className="fade-in max-w-5xl mx-auto py-12 px-4 md:px-8 space-y-12">
-      <div className="flex flex-col md:flex-row items-center gap-8 border-b pb-12" style={{ borderColor: 'var(--border-default)' }}>
-        <div className="w-32 h-32 md:w-48 md:h-48 lottie-themed">
-          <Lottie animationData={historyLottie} loop={true} />
+    <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
+      <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
+        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
+          <LottieView animationData={historyLottie} loop={true} />
         </div>
         <div className="space-y-4 text-center md:text-left">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Activity Log</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Usage History</h1>
+          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Your activity</p>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Usage history</h1>
           <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Track your ephemeral footprint. Remember: Null-Secret never stores the content of your messages, only the minimal proof of your encrypted actions.
+            A list of every secret you have created from this account. We only keep the ID and the time you sent it. The actual messages are never logged anywhere.
           </p>
         </div>
-        <div className="ml-auto flex flex-col items-center md:items-end gap-2">
-          <div className="p-6 border flex flex-col items-center md:items-end justify-center min-w-[200px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-secondary)' }}>
-            <p className="text-[9px] uppercase tracking-[0.3em] font-bold mb-1" style={{ color: 'var(--text-tertiary)' }}>Security Quota</p>
+        <div className="md:ml-auto w-full md:w-auto flex flex-col items-center md:items-end gap-2">
+          <div className="p-6 border flex flex-col items-center md:items-end justify-center w-full min-w-[200px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-secondary)' }}>
+            <p className="text-[9px] uppercase tracking-[0.3em] font-bold mb-1" style={{ color: 'var(--text-tertiary)' }}>Today's usage</p>
             <div className="flex items-baseline gap-1">
               <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>{dailyCount}</span>
-              <span className="text-sm font-bold" style={{ color: 'var(--text-tertiary)' }}>/ 30</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-tertiary)' }}>/ {DAILY_SECRET_LIMIT}</span>
             </div>
-            <p className="text-[10px] font-bold mt-2 uppercase tracking-widest" style={{ color: dailyCount >= 30 ? 'var(--text-danger)' : 'var(--text-success)' }}>
-              {dailyCount >= 30 ? 'Limit Reached' : 'Secure Actions Used'}
+            <p className="text-[10px] font-bold mt-2 uppercase tracking-widest" style={{ color: dailyCount >= DAILY_SECRET_LIMIT ? 'var(--text-danger)' : 'var(--text-success)' }}>
+              {dailyCount >= DAILY_SECRET_LIMIT ? 'Daily limit reached' : 'Secrets created today'}
             </p>
           </div>
         </div>
@@ -88,14 +112,14 @@ const UsageHistory: React.FC = () => {
 
       <div className="space-y-6">
         <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-default)' }}>
-          <div className="col-span-6 md:col-span-4">Creation Date</div>
-          <div className="col-span-6 md:col-span-8">Secret ID (Encrypted Reference)</div>
+          <div className="col-span-6 md:col-span-4">Created</div>
+          <div className="col-span-6 md:col-span-8">Secret ID</div>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-xs font-bold uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Retrieving secure logs...</div>
+          <div className="text-center py-12 text-xs font-bold uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading your history…</div>
         ) : history.length === 0 ? (
-          <div className="text-center py-12 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>No recent activity found.</div>
+          <div className="text-center py-12 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>You have not created any secrets yet. Start with the button below.</div>
         ) : (
           history.map((item, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-4 px-6 py-6 border hover:bg-[var(--bg-secondary)] transition-colors group" style={{ borderColor: 'var(--border-default)' }}>
@@ -107,14 +131,21 @@ const UsageHistory: React.FC = () => {
       </div>
 
       <div className="p-8 border bg-[var(--bg-secondary)] space-y-4" style={{ borderColor: 'var(--border-default)' }}>
-        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Privacy Note</h3>
+        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>What this list does and does not contain</h3>
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-          This log contains only zero-knowledge references to your actions. It is impossible to reconstruct your messages from this list. Logs are automatically pruned periodically for your security.
+          You are looking at IDs and timestamps only. The contents of the messages were never sent to us in readable form, so they cannot appear here. We periodically clean up this list, so it does not grow without limit.
         </p>
       </div>
 
-      <div className="pt-8">
-        <button onClick={() => navigate('/app')} className="btn btn-primary w-full md:w-auto">Create New Secret</button>
+      <div className="flex flex-col md:flex-row gap-3 pt-8">
+        <button onClick={() => navigate('/app')} className="btn btn-primary w-full md:w-auto">Create new secret</button>
+        <button
+          onClick={handleExportCsv}
+          disabled={history.length === 0}
+          className="btn btn-secondary w-full md:w-auto"
+        >
+          Download history as CSV
+        </button>
       </div>
     </div>
   );
