@@ -4,7 +4,7 @@ export default function Footer() {
     const navigate = useNavigate();
 
     return (
-        <div className="w-full flex flex-col justify-center relative overflow-hidden font-sans pt-12 pb-24 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        <div className="w-full flex flex-col justify-center relative overflow-hidden font-sans pt-8 md:pt-12 pb-16 md:pb-24 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
 
             {/* Main Footer Card */}
             <div className="w-full max-w-4xl mx-auto border rounded-3xl p-8 lg:p-12 z-10 relative shadow-2xl" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)' }}>
@@ -21,8 +21,8 @@ export default function Footer() {
                             </div>
                             {/* Tagline */}
                             <h2 className="text-[28px] leading-[1.15] font-bold tracking-tight mb-6" style={{ color: 'var(--text-primary)' }}>
-                                Zero-knowledge<br />
-                                ephemeral sharing
+                                Private messages<br />
+                                that disappear after reading
                             </h2>
                         </div>
                         {/* Subtext */}
@@ -36,8 +36,9 @@ export default function Footer() {
                         <h3 className="font-semibold text-[15px] mb-6" style={{ color: 'var(--text-primary)' }}>Links</h3>
                         <ul className="space-y-4 flex-1">
                             <li><button onClick={() => navigate('/app')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Create Secret</button></li>
-                            <li><button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>How It Works</button></li>
-                            <li><button onClick={() => navigate('/login')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Vault Login</button></li>
+                            <li><button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Home</button></li>
+                            <li><button onClick={() => navigate('/privacy')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Privacy</button></li>
+                            <li><button onClick={() => navigate('/login')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Sign In</button></li>
                         </ul>
                     </div>
 
@@ -63,17 +64,6 @@ export default function Footer() {
                             <li>
                                 <a href="mailto:anuragmishrasnag06082004@gmail.com" className="flex items-center gap-2 hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>
                                     <span>Email</span>
-                                </a>
-                            </li>
-                            <li className="pt-2">
-                                <a 
-                                    href="/privacy" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="hover:opacity-75 transition-opacity text-[13px] italic" 
-                                    style={{ color: 'var(--text-tertiary)', textDecoration: 'none' }}
-                                >
-                                    Privacy & Security Policy
                                 </a>
                             </li>
                         </ul>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
@@ -6,9 +6,18 @@ import { auth } from '../utils/firebase';
 import logolottie from '../assets/lotties/logolottie.json';
 import InViewLottie from '../components/InViewLottie';
 import Footer from '../components/Footer';
-import Navbar from '../components/Navbar';
+import { AUTH_ROUTES } from '../utils/constants';
+import { readSessionTimeoutMinutes } from '../utils/sessionTimeout';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
+const MENU_CLOSE_DURATION_MS = 240;
+const INACTIVITY_EVENTS: readonly (keyof WindowEventMap)[] = [
+  'mousemove',
+  'mousedown',
+  'keydown',
+  'touchstart',
+  'scroll',
+];
 
 const ThemeIcon: React.FC<{ preference: string }> = ({ preference }) => {
   if (preference === 'system') {
@@ -42,20 +51,59 @@ const ThemeIcon: React.FC<{ preference: string }> = ({ preference }) => {
   );
 };
 
+type WifiState = 'error' | 'staging' | 'connected';
+
+function deriveWifiState(alive: boolean | null, animState: 0 | 1 | 2 | 3): WifiState {
+  if (alive === false) return 'error';
+  if (alive === true) return 'connected';
+  if (animState === 0) return 'error';
+  if (animState === 1) return 'staging';
+  return 'connected';
+}
+
+const WifiErrorIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fade-in-quick">
+    <line x1="2" y1="2" x2="22" y2="22" />
+    <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+    <path d="M2 8.82a15 15 0 0 1 4.17-2.65" />
+    <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.82" />
+    <line x1="12" y1="20" x2="12.01" y2="20" />
+  </svg>
+);
+
+const WifiStagingIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="20" x2="12.01" y2="20" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0s' }} />
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.2s' }} />
+    <path d="M5 12.55a11 11 0 0 1 14.08 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.5s' }} />
+    <path d="M1.42 9a16 16 0 0 1 21.16 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.8s' }} />
+  </svg>
+);
+
+const WifiOkIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fade-in-quick">
+    <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+    <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+    <line x1="12" y1="20" x2="12.01" y2="20" />
+  </svg>
+);
+
 const HeaderWifiIcon: React.FC<{ alive: boolean | null }> = ({ alive }) => {
-  const [animState, setAnimState] = useState<0|1|2|3>(0);
+  const [animState, setAnimState] = useState<0 | 1 | 2 | 3>(0);
 
   useEffect(() => {
     if (alive !== null) return;
-    const t1 = setTimeout(() => setAnimState(1), 1000);
-    const t2 = setTimeout(() => setAnimState(2), 2000);
-    const t3 = setTimeout(() => setAnimState(3), 3000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const timers: number[] = [
+      window.setTimeout(() => setAnimState(1), 1000),
+      window.setTimeout(() => setAnimState(2), 2000),
+      window.setTimeout(() => setAnimState(3), 3000),
+    ];
+    return () => timers.forEach(window.clearTimeout);
   }, [alive]);
 
+  const state = deriveWifiState(alive, animState);
   const isChecking = alive === null && animState < 3;
-  const isConnected = alive === true || (alive === null && animState >= 2);
-  const isError = alive === false;
 
   return (
     <div className="relative flex items-center justify-center w-8 h-8">
@@ -68,31 +116,9 @@ const HeaderWifiIcon: React.FC<{ alive: boolean | null }> = ({ alive }) => {
       </svg>
 
       <div className="absolute inset-0 flex items-center justify-center">
-        {(isError || (alive === null && animState === 0)) && (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fade-in-quick">       
-            <line x1="2" y1="2" x2="22" y2="22" />
-            <path d="M8.5 16.5a5 5 0 0 1 7 0" />
-            <path d="M2 8.82a15 15 0 0 1 4.17-2.65" />
-            <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.82" />
-            <line x1="12" y1="20" x2="12.01" y2="20" />
-          </svg>
-        )}
-        {(alive === null && animState === 1) && (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="20" x2="12.01" y2="20" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0s' }} />
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.2s' }} />
-            <path d="M5 12.55a11 11 0 0 1 14.08 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.5s' }} />
-            <path d="M1.42 9a16 16 0 0 1 21.16 0" className="opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" style={{ animationDelay: '0.8s' }} />
-          </svg>
-        )}
-        {(isConnected && animState >= 2) && (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fade-in-quick">      
-            <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-            <line x1="12" y1="20" x2="12.01" y2="20" />
-          </svg>
-        )}
+        {state === 'error' && <WifiErrorIcon />}
+        {state === 'staging' && <WifiStagingIcon />}
+        {state === 'connected' && <WifiOkIcon />}
       </div>
     </div>
   );
@@ -110,9 +136,33 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [backendAlive, setBackendAlive] = useState<boolean | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  /** 'closed' = not in DOM; 'open' = mounted with enter animation; 'closing' = playing exit animation. */
+  const [menuPhase, setMenuPhase] = useState<'closed' | 'open' | 'closing'>('closed');
   const [user, setUser] = useState<User | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const isMobileMenuOpen = menuPhase !== 'closed';
+  const closeMenuTimerRef = useRef<number | null>(null);
+
+  const closeMobileMenu = useCallback(() => {
+    setMenuPhase(prev => (prev === 'open' ? 'closing' : prev));
+  }, []);
+
+  const toggleMobileMenu = useCallback(() => {
+    setMenuPhase(prev => {
+      if (prev === 'closed') return 'open';
+      if (prev === 'open') return 'closing';
+      return prev;
+    });
+  }, []);
+
+  // After the close animation finishes, unmount the menu so it does not stay focusable.
+  useEffect(() => {
+    if (menuPhase !== 'closing') return;
+    closeMenuTimerRef.current = window.setTimeout(() => setMenuPhase('closed'), MENU_CLOSE_DURATION_MS);
+    return () => {
+      if (closeMenuTimerRef.current !== null) window.clearTimeout(closeMenuTimerRef.current);
+    };
+  }, [menuPhase]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -121,55 +171,103 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await signOut(auth);
     setShowProfileMenu(false);
     navigate('/');
-  };
+  }, [navigate]);
 
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+    if (!showProfileMenu) return;
+    const handleClickOutside = (event: MouseEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
         setShowProfileMenu(false);
       }
     };
-    if (showProfileMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showProfileMenu]);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 8);
+    const handleScroll = (): void => {
+      setScrolled(prev => {
+        const next = window.scrollY > 8;
+        return prev === next ? prev : next;
+      });
+    };
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
-    const checkHealth = async () => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const checkHealth = async (): Promise<void> => {
       try {
-        const resp = await fetch(`${API_BASE}/healthz`, { mode: 'cors' });
-        if (resp.ok) {
-          setBackendAlive(true);
-        } else {
-          setBackendAlive(false);
-        }
-      } catch {
+        const resp = await fetch(`${API_BASE}/healthz`, {
+          mode: 'cors',
+          signal: controller.signal,
+        });
+        if (cancelled) return;
+        setBackendAlive(resp.ok);
+      } catch (err) {
+        if (cancelled || (err instanceof DOMException && err.name === 'AbortError')) return;
         setBackendAlive(false);
       }
     };
-    checkHealth();
-    const interval = setInterval(checkHealth, 60000);
-    return () => clearInterval(interval);
+
+    void checkHealth();
+    const interval = window.setInterval(() => { void checkHealth(); }, 60_000);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearInterval(interval);
+    };
   }, []);
+
+  /**
+   * Auto-logout for signed-in users.
+   * Resets a deadline on each interaction event. When the deadline passes
+   * with no activity, signs the user out. Effect cleanly tears down its
+   * listeners and timer when the user signs out or the window unmounts.
+   */
+  useEffect(() => {
+    if (!user) return;
+    const minutes = readSessionTimeoutMinutes();
+    const timeoutMs = minutes * 60 * 1000;
+    let deadlineTimer: number | null = null;
+
+    const triggerLogout = () => {
+      void handleSignOut();
+    };
+
+    const resetDeadline = () => {
+      if (deadlineTimer !== null) window.clearTimeout(deadlineTimer);
+      deadlineTimer = window.setTimeout(triggerLogout, timeoutMs);
+    };
+
+    resetDeadline();
+    for (const evt of INACTIVITY_EVENTS) {
+      window.addEventListener(evt, resetDeadline, { passive: true });
+    }
+    return () => {
+      if (deadlineTimer !== null) window.clearTimeout(deadlineTimer);
+      for (const evt of INACTIVITY_EVENTS) {
+        window.removeEventListener(evt, resetDeadline);
+      }
+    };
+  }, [user, handleSignOut]);
 
   const isHome = location.pathname === '/';
   const isApp = location.pathname === '/app';
-
-  // satisfy unused import check
-  if (false) console.log(Navbar);
+  const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-200" style={{ background: 'var(--bg-primary)' }}>
@@ -301,18 +399,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                           <p className="text-xs font-bold mt-1 break-all" style={{ color: 'var(--text-primary)' }}>{user.email}</p>
                         </div>
                         <div className="py-1">
-                          <button onClick={() => { setShowProfileMenu(false); navigate('/app'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Create New Secret</button>
+                          <button onClick={() => { setShowProfileMenu(false); navigate('/app'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Create Secret</button>
+                          <button onClick={() => { setShowProfileMenu(false); navigate('/account'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Account Profile</button>
                           <button onClick={() => { setShowProfileMenu(false); navigate('/history'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Usage History</button>
                           <button onClick={() => { setShowProfileMenu(false); navigate('/security'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Security Settings</button>
-                          <a 
-                              href="/privacy" 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="block px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" 
-                              style={{ color: 'var(--text-primary)' }}
-                          >
-                              Privacy Manifesto
-                          </a>
+                          <button onClick={() => { setShowProfileMenu(false); navigate('/privacy'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Privacy</button>
                         </div>
                         <div className="p-1 border-t" style={{ borderColor: 'var(--border-default)' }}>
                           <button onClick={handleSignOut} className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-500/5 transition-colors">Sign Out</button>
@@ -323,15 +414,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         <button onClick={() => { setShowProfileMenu(false); navigate('/login'); }} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Sign In</button>
                         <button onClick={() => { setShowProfileMenu(false); navigate('/signup'); }} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Create Account</button>
                         <div className="border-t my-1" style={{ borderColor: 'var(--border-default)' }} />
-                        <a 
-                            href="/privacy" 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="block px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" 
-                            style={{ color: 'var(--text-primary)' }}
-                        >
-                            Privacy Manifesto
-                        </a>
+                        <button onClick={() => { setShowProfileMenu(false); navigate('/privacy'); }} className="w-full text-left px-4 py-3 text-xs font-semibold hover:bg-[var(--accent-subtle)] transition-colors" style={{ color: 'var(--text-primary)' }}>Privacy</button>
                       </div>
                     )}
                   </div>
@@ -342,7 +425,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {/* Hamburger Menu */}
             <div className="flex items-center">
               <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  onClick={toggleMobileMenu}
                   className="p-2 transition-colors flex items-center justify-center"
                   style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)', width: '36px', height: '36px' }}
                   aria-label={isMobileMenuOpen ? "Close Menu" : "Open Menu"}
@@ -367,71 +450,130 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 flex flex-col slide-up pt-[73px]" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-
-              {/* Mobile Links */}
-              <div className="flex-1 overflow-y-auto px-6 py-12 space-y-8">
-                  <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.05s' }}>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} className="block w-full py-8 text-left font-bold text-[32px] tracking-tight hover:pl-2 transition-all">
-                          Home
-                      </button>
-                  </div>
-                  <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.1s' }}>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/app'); }} className="block w-full py-8 text-left font-bold text-[32px] tracking-tight hover:pl-2 transition-all">
-                          Create Secret
-                      </button>
-                  </div>
-                  <div className="slide-up" style={{ borderBottom: '1px solid var(--border-default)', animationDelay: '0.15s' }}>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="block w-full py-8 text-left font-bold text-[32px] tracking-tight hover:pl-2 transition-all">
-                          Vault
-                      </button>
-                                    {user && (
-                    <div className="py-8 space-y-6 border-t" style={{ borderColor: 'var(--border-default)' }}>
-                      <div className="text-[11px] uppercase tracking-[0.3em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Account Details</div>
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 border flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>  
-                          {user.photoURL ? <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-xl font-bold">{(user.displayName || user.email || 'U').charAt(0)}</span>}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-lg font-bold tracking-tight">{user.displayName || 'User'}</p>
-                          <p className="text-xs break-all" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 gap-4 pt-4">
-                          <button onClick={() => { setIsMobileMenuOpen(false); navigate('/history'); }} className="block w-full py-4 text-left text-base font-bold border-b" style={{ borderColor: 'var(--border-default)' }}>Usage History</button>
-                          <button onClick={() => { setIsMobileMenuOpen(false); navigate('/security'); }} className="block w-full py-4 text-left text-base font-bold border-b" style={{ borderColor: 'var(--border-default)' }}>Security Settings</button>
-                      </div>
-                    </div>
-                  )}
+        <div
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Main menu"
+          className={`fixed inset-0 z-50 flex flex-col pt-[var(--header-h)] ${menuPhase === 'closing' ? 'menu-close' : 'menu-open'}`}
+          style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          aria-hidden={menuPhase === 'closing'}
+        >
+          <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8">
+            {/* Identity row */}
+            {user ? (
+              <div className="flex items-center gap-4 pb-6 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                <div className="w-12 h-12 border flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
+                  {user.photoURL
+                    ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+                    : <span className="text-base font-bold uppercase">{(user.displayName || user.email || 'U').charAt(0)}</span>}
                 </div>
-        </div>
-
-              {/* Mobile Footer Actions */}
-              <div className="p-6 space-y-4 mt-auto" style={{ borderTop: '1px solid var(--border-default)' }}>
-                  {!user ? (
-                    <>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="w-full py-4 text-base font-bold transition-colors" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
-                          Sign In to Vault
-                      </button>
-                      <button onClick={() => { setIsMobileMenuOpen(false); navigate('/signup'); }} className="w-full py-4 text-base font-bold transition-colors" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
-                          Create Account
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }} className="w-full py-4 text-base font-bold transition-colors text-red-500" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
-                        Sign Out
-                    </button>
-                  )}
+                <div className="min-w-0">
+                  <p className="text-sm font-bold tracking-tight truncate">{user.displayName || 'Signed in'}</p>
+                  <p className="text-[11px] break-all" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
+                </div>
               </div>
+            ) : (
+              <div className="pb-6 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                <p className="text-[10px] uppercase tracking-[0.3em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Welcome</p>
+                <p className="text-sm mt-1 leading-snug" style={{ color: 'var(--text-secondary)' }}>Sign in to save your daily limit, see your history, and pick stricter security settings.</p>
+              </div>
+            )}
+
+            {/* Primary navigation */}
+            <nav aria-label="Primary" className="pt-6">
+              <p className="text-[10px] uppercase tracking-[0.3em] font-bold mb-4" style={{ color: 'var(--text-tertiary)' }}>Navigate</p>
+              <ul className="space-y-0">
+                {[
+                  { label: 'Home', path: '/' },
+                  { label: 'Create Secret', path: '/app' },
+                  { label: 'Privacy', path: '/privacy' },
+                ].map((item) => {
+                  const active = location.pathname === item.path;
+                  return (
+                    <li key={item.path}>
+                      <button
+                        onClick={() => { closeMobileMenu(); navigate(item.path); }}
+                        className="group w-full flex items-center justify-between py-5 text-left border-b transition-colors"
+                        style={{ borderColor: 'var(--border-default)', color: active ? 'var(--text-primary)' : 'var(--text-primary)' }}
+                        aria-current={active ? 'page' : undefined}
+                      >
+                        <span className="font-bold text-[22px] sm:text-[26px] tracking-tight">{item.label}</span>
+                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold" style={{ color: active ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                          {active && <span className="w-1.5 h-1.5 inline-block" style={{ background: 'var(--text-primary)' }} aria-hidden="true" />}
+                          {active ? 'Open' : 'Go'}
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                          </svg>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            {/* Account section, signed-in only */}
+            {user && (
+              <nav aria-label="Account" className="pt-8">
+                <p className="text-[10px] uppercase tracking-[0.3em] font-bold mb-4" style={{ color: 'var(--text-tertiary)' }}>Your account</p>
+                <ul className="space-y-0">
+                  {[
+                    { label: 'Account Profile', path: '/account' },
+                    { label: 'Usage History', path: '/history' },
+                    { label: 'Security Settings', path: '/security' },
+                  ].map((item) => {
+                    const active = location.pathname === item.path;
+                    return (
+                      <li key={item.path}>
+                        <button
+                          onClick={() => { closeMobileMenu(); navigate(item.path); }}
+                          className="w-full flex items-center justify-between py-4 text-left text-sm font-bold border-b transition-colors"
+                          style={{ borderColor: 'var(--border-default)' }}
+                          aria-current={active ? 'page' : undefined}
+                        >
+                          <span>{item.label}</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-tertiary)' }}>
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            )}
           </div>
+
+          {/* Sticky bottom action */}
+          <div className="px-5 sm:px-8 py-4 mt-auto" style={{ borderTop: '1px solid var(--border-default)' }}>
+            {!user ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => { closeMobileMenu(); navigate('/login'); }} className="w-full py-3 text-sm font-bold transition-colors" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
+                  Sign In
+                </button>
+                <button onClick={() => { closeMobileMenu(); navigate('/signup'); }} className="w-full py-3 text-sm font-bold transition-colors" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
+                  Create Account
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => { closeMobileMenu(); void handleSignOut(); }} className="w-full py-3 text-sm font-bold transition-colors text-red-500" style={{ background: 'transparent', border: '1px solid var(--border-default)' }}>
+                Sign Out
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Main ── */}
-      <main className="flex-grow w-full max-w-screen-2xl mx-auto px-2 md:px-8 py-8 fade-in">    
+      <main
+        className={`flex-grow w-full mx-auto fade-in ${isAuthRoute ? 'p-0' : 'max-w-screen-2xl px-3 md:px-8 py-2 md:py-4'}`}
+      >
         {children}
       </main>
 
-      <Footer />
+      {!isAuthRoute && <Footer />}
     </div>
   );
 };

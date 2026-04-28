@@ -3,6 +3,22 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 type ThemeMode = 'light' | 'dark';
 type ThemePreference = 'system' | 'light' | 'dark';
 
+const THEME_PREFERENCES: readonly ThemePreference[] = ['system', 'light', 'dark'];
+
+function isThemePreference(value: unknown): value is ThemePreference {
+  return typeof value === 'string' && (THEME_PREFERENCES as readonly string[]).includes(value);
+}
+
+function readStoredPreference(): ThemePreference {
+  if (typeof window === 'undefined') return 'system';
+  try {
+    const raw = window.localStorage.getItem('theme-preference');
+    return isThemePreference(raw) ? raw : 'system';
+  } catch {
+    return 'system';
+  }
+}
+
 interface ThemeContextType {
   /** The resolved theme currently applied to the UI. */
   theme: ThemeMode;
@@ -24,16 +40,21 @@ function getSystemTheme(): ThemeMode {
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const stored = (localStorage.getItem('theme-preference') as ThemePreference | null);
-  const [preference, setPreference] = useState<ThemePreference>(stored || 'system');
-  const [osTheme, setOsTheme] = useState<ThemeMode>(getSystemTheme());
+  const [preference, setPreference] = useState<ThemePreference>(readStoredPreference);
+  const [osTheme, setOsTheme] = useState<ThemeMode>(getSystemTheme);
 
   const theme = preference === 'system' ? osTheme : preference;
 
-  // Apply theme class to <body>
+  // Apply theme class to <body> idempotently without clobbering other classes.
   useEffect(() => {
-    document.body.className = theme;
-    localStorage.setItem('theme-preference', preference);
+    const body = document.body;
+    body.classList.remove('light', 'dark');
+    body.classList.add(theme);
+    try {
+      window.localStorage.setItem('theme-preference', preference);
+    } catch {
+      // Storage may be unavailable (private mode); preference still applies in-memory.
+    }
   }, [theme, preference]);
 
   // Listen for OS theme changes when preference is 'system'

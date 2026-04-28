@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import LottieView from '../components/LottieView';
+import shieldAnimation from '../assets/lotties/shield-morph.json';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
 
@@ -20,8 +22,10 @@ const AdminDashboard: React.FC = () => {
 
   const fetchInfo = async () => {
     try {
-      const res = await fetch(`${API_BASE}/secret/${id}/info?admin_key=${adminKey}`);
-      if (!res.ok) throw new Error('Secret not found or invalid admin key.');
+      const res = await fetch(`${API_BASE}/secret/${id}/info`, {
+        headers: { 'X-Admin-Key': adminKey },
+      });
+      if (!res.ok) throw new Error('We could not find this secret. The admin link may be wrong, or the message has already self-destructed.');
       const data = await res.json();
       setInfo(data);
     } catch (err: unknown) {
@@ -37,13 +41,16 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   const handleBurn = async () => {
-    if (!window.confirm("Are you sure you want to permanently destroy this secret?")) return;
+    if (!window.confirm('Delete this secret right now, before anyone reads it? This cannot be undone.')) return;
     setBurning(true);
     try {
-      const res = await fetch(`${API_BASE}/secret/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to burn secret.');
+      const res = await fetch(`${API_BASE}/secret/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Key': adminKey },
+      });
+      if (!res.ok) throw new Error('We could not delete this secret. Please try again.');
       setInfo(null);
-      setError('Secret successfully destroyed.');
+      setError('Secret deleted. The link no longer works for anyone.');
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Burn failed');
     } finally {
@@ -53,7 +60,10 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 space-y-6 slide-up">
+      <div className="flex flex-col items-center justify-center py-12 md:py-16 space-y-6 slide-up" aria-live="polite">
+        <div className="lottie-themed w-56 h-56 md:w-72 md:h-72">
+          <LottieView animationData={shieldAnimation} loop={true} />
+        </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
           Loading status…
         </p>
@@ -65,7 +75,7 @@ const AdminDashboard: React.FC = () => {
     return (
       <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" role="alert" aria-live="assertive">
         <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-          Dashboard Unavailable
+          We could not load this dashboard
         </h2>
         <div className="error-banner">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -79,7 +89,7 @@ const AdminDashboard: React.FC = () => {
           onClick={() => navigate('/app')}
           className="btn btn-ghost w-full text-xs tracking-wider uppercase"
         >
-          Create New Secret
+          Create new secret
         </button>
       </div>
     );
@@ -89,10 +99,10 @@ const AdminDashboard: React.FC = () => {
     <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up">
       <div className="space-y-2 mb-8">
         <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-          Admin Dashboard
+          Manage your secret
         </h2>
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          Track the status of your secure message.
+          See whether the message has been opened and delete it early if you need to.
         </p>
       </div>
 
@@ -101,14 +111,14 @@ const AdminDashboard: React.FC = () => {
           <div className="space-y-0" style={{ border: `1px solid var(--border-default)` }}>
             <div className="flex justify-between items-center p-4" style={{ background: 'var(--bg-secondary)', borderBottom: `1px solid var(--border-default)` }}>
               <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--text-secondary)' }}>Status</span>
-              <span className="text-xs font-bold" style={{ color: 'var(--text-success)' }}>Active</span>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-success)' }}>Live</span>
             </div>
             <div className="flex justify-between items-center p-4" style={{ background: 'var(--bg-elevated)', borderBottom: `1px solid var(--border-default)` }}>
-              <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--text-secondary)' }}>Views</span>
+              <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--text-secondary)' }}>Times opened</span>
               <span className="text-xs mono font-bold" style={{ color: 'var(--text-primary)' }}>{info.views} / {info.viewLimit}</span>
             </div>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center p-4 gap-2" style={{ background: 'var(--bg-elevated)' }}>
-              <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--text-secondary)' }}>Expires</span>
+              <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--text-secondary)' }}>Auto-deletes at</span>
               <span className="text-xs mono font-bold" style={{ color: 'var(--text-primary)' }}>{new Date(info.expiresAt).toLocaleString()}</span>
             </div>
           </div>
@@ -125,10 +135,10 @@ const AdminDashboard: React.FC = () => {
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
                 <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
-              {burning ? 'Burning...' : 'Burn Now'}
+              {burning ? 'Deleting…' : 'Delete now'}
             </button>
             <p className="text-[10px] text-center mt-3 uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>
-              This action cannot be undone.
+              This cannot be undone.
             </p>
           </div>
         </>

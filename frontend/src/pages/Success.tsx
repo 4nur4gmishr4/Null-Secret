@@ -9,8 +9,7 @@ const Success: React.FC = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
   
-  const hash = location.hash.replace('#', '');
-  const keyStr = hash;
+  const keyStr = location.hash.replace('#', '');
   const adminKey = location.state?.adminKey;
   
   React.useEffect(() => {
@@ -28,10 +27,17 @@ const Success: React.FC = () => {
   const fullUrl = `${window.location.origin}/v/${id}#${keyStr}`;
   const adminUrl = adminKey ? `${window.location.origin}/admin/${id}` : '';
 
-  const copyToClipboard = (text: string, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
-    navigator.clipboard.writeText(text);
-    setter(true);
-    setTimeout(() => setter(false), 2500);
+  const copyToClipboard = async (
+    text: string,
+    setter: React.Dispatch<React.SetStateAction<boolean>>
+  ): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setter(true);
+      setTimeout(() => setter(false), 2500);
+    } catch (err) {
+      console.error('clipboard write failed', err);
+    }
   };
 
   return (
@@ -45,16 +51,16 @@ const Success: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            {copied || copiedAdmin ? 'Copied to Clipboard' : 'Your Secure Links Are Ready'}
+            {copied || copiedAdmin ? 'Copied' : 'Your links are ready'}
           </h2>
         </div>
       </div>
 
       {/* Secret Link Display */}
       <div className="space-y-2">
-        <label className="label">Secret Link (For Recipient)</label>
+        <label className="label">Link for the recipient</label>
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          Share this link with the intended recipient. The encryption key is embedded in the URL fragment.
+          Send this to the person who should read the message. The decryption key is hidden in the link itself, after the # sign, so we never see it.
         </p>
         <div className="link-display" aria-live="assertive">
           {fullUrl}
@@ -64,13 +70,13 @@ const Success: React.FC = () => {
             onClick={() => copyToClipboard(fullUrl, setCopied)}
             className={`btn w-full text-xs tracking-wider uppercase ${copied ? 'btn-secondary' : 'btn-primary'}`}
           >
-            {copied ? 'Copied!' : 'Copy Secret Link'}
+            {copied ? 'Copied' : 'Copy link'}
           </button>
           <button
             onClick={() => setShowQR(!showQR)}
             className="btn btn-secondary w-full text-xs tracking-wider uppercase"
           >
-            {showQR ? 'Hide QR' : 'Show QR'}
+            {showQR ? 'Hide QR code' : 'Show QR code'}
           </button>
         </div>
       </div>
@@ -78,9 +84,9 @@ const Success: React.FC = () => {
       {/* Admin Link Display */}
       {adminUrl && (
         <div className="space-y-2 pt-6">
-          <label className="label">Admin Dashboard Link (For You)</label>
+          <label className="label">Admin link (keep this for yourself)</label>
           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            Keep this link secret! Use it to track view status and manually burn the message before it's read.
+            Save this link somewhere safe. It lets you check whether the message has been opened and lets you delete it early if you change your mind. Do not share it.
           </p>
           <div className="link-display" aria-live="assertive" style={{ borderColor: 'var(--border-strong)', color: 'var(--text-secondary)' }}>
             {adminUrl}
@@ -91,7 +97,7 @@ const Success: React.FC = () => {
               className={`btn w-full text-xs tracking-wider uppercase ${copiedAdmin ? 'btn-secondary' : 'btn-ghost'}`}
               style={{ border: '1px solid var(--border-default)' }}
             >
-              {copiedAdmin ? 'Copied!' : 'Copy Admin Link'}
+              {copiedAdmin ? 'Copied' : 'Copy admin link'}
             </button>
           </div>
         </div>
@@ -113,10 +119,10 @@ const Success: React.FC = () => {
       {/* Security Notes */}
       <div className="space-y-0 pt-6">
         {[
-          'The encryption key never touches our server.',
-          'The link works only for the specified number of views.',
-          'Once fully viewed, the message is destroyed permanently.',
-          'Do not lose the admin link.'
+          'The decryption key stays in the link, not on our server.',
+          'The link only works for the number of opens you chose.',
+          'Once that limit is reached, the message is gone forever.',
+          'If you lose the admin link, you cannot manage this secret anymore.'
         ].map((note, i) => (
           <div key={i} className="info-row" style={{ borderTop: i === 0 ? undefined : 'none' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}>
@@ -132,7 +138,7 @@ const Success: React.FC = () => {
         onClick={() => navigate('/app')}
         className="btn btn-ghost w-full text-xs tracking-wider uppercase mt-4"
       >
-        Create Another Message
+        Send another secret
       </button>
     </div>
   );

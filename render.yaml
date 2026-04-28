@@ -1,0 +1,38 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# One-click deploy of the Null-Secret Go backend.
+#
+# Usage:
+#   1. Push this file to GitHub.
+#   2. On Render, click "New → Blueprint" and select this repo.
+#   3. Render reads this file, provisions the service, and links your
+#      Firebase environment variables.
+#
+# The free Web Service plan spins down after 15 minutes of inactivity.
+# To keep it warm, set up an external cron at https://cron-job.org/
+# that pings /api/v1/healthz every 10 minutes.
+
+services:
+  - type: web
+    name: null-secret-api
+    runtime: docker
+    region: oregon
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/healthz
+    envVars:
+      # Render injects PORT automatically. We read it in cmd/api/main.go.
+      - key: ENV
+        value: production
+      # Comma-separated list. Replace with your Vercel production domain
+      # and any preview-deployment domains you want to allow.
+      - key: ALLOWED_ORIGINS
+        value: "https://null-secret.vercel.app"
+      # Render terminates TLS at the proxy. Honour the X-Forwarded-For
+      # header so per-IP rate limiting actually works.
+      - key: TRUST_PROXY
+        value: "true"
+      # If your frontend runs at a different scheme/host, set it here so
+      # the Content-Security-Policy connect-src whitelists the right origin.
+      - key: VITE_API_BASE
+        value: "https://null-secret-api.onrender.com"

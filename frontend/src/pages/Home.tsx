@@ -1,23 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Lottie from 'lottie-react';
+import LottieView from '../components/LottieView';
 import { generateKey, deriveKeyFromPassword, exportKey, encrypt, bundle } from '../utils/crypto';
 import shieldAnimation from '../assets/lotties/shield-morph.json';
 import { auth, db } from '../utils/firebase';
-import { 
-  doc, 
-  runTransaction, 
-  serverTimestamp, 
-  collection, 
-  addDoc 
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+  collection,
+  addDoc
 } from 'firebase/firestore';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LottieComponent = (Lottie as any).default || Lottie;
-
 import { zipSync } from 'fflate';
+import { DAILY_SECRET_LIMIT } from '../utils/constants';
+import { estimatePasswordStrength, type StrengthLabel } from '../utils/passwordStrength';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
+
+const STRENGTH_LABELS: Record<StrengthLabel, string> = {
+  empty: '',
+  weak: 'Weak',
+  fair: 'Fair',
+  good: 'Good',
+  strong: 'Strong',
+  excellent: 'Excellent',
+};
+
+const STRENGTH_COLORS: Record<StrengthLabel, string> = {
+  empty: 'var(--text-tertiary)',
+  weak: 'var(--text-danger)',
+  fair: 'var(--text-danger)',
+  good: 'var(--text-tertiary)',
+  strong: 'var(--text-success)',
+  excellent: 'var(--text-success)',
+};
 
 const Home: React.FC = () => {
   const [text, setText] = useState('');
@@ -27,9 +43,11 @@ const Home: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const navigate = useNavigate();
 
-  const securityStrength = Math.min((text.length / 500) * 100, 100);
+  const messageFill = Math.min((text.length / 500) * 100, 100);
+  const passwordStrength = estimatePasswordStrength(password);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -37,9 +55,40 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only flip back when leaving the wrapper, not its children.
+    if (e.currentTarget === e.target) setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+    setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleCreate = async () => {
     if (!text && files.length === 0) {
-      setError('Please enter a message or attach a file.');
+      setError('Type a message or attach a file before continuing.');
       return;
     }
 
@@ -64,7 +113,7 @@ const Home: React.FC = () => {
               count = usageSnap.data().count;
             }
 
-            if (count >= 30) {
+            if (count >= DAILY_SECRET_LIMIT) {
               throw new Error('LIMIT_EXCEEDED');
             }
 
@@ -83,17 +132,18 @@ const Home: React.FC = () => {
             if (date === today) count = currentCount;
           }
 
-          if (count >= 30) {
+          if (count >= DAILY_SECRET_LIMIT) {
             throw new Error('LIMIT_EXCEEDED');
           }
           
           localStorage.setItem('ns_usage', JSON.stringify({ date: today, currentCount: count + 1 }));
         }
-      } catch (usageErr: any) {
-        if (usageErr.message === 'LIMIT_EXCEEDED') throw usageErr;
+      } catch (usageErr: unknown) {
+        if (usageErr instanceof Error && usageErr.message === 'LIMIT_EXCEEDED') throw usageErr;
         // Handle Firestore API disabled or network error
         console.error('Usage tracking failed', usageErr);
-        if (usageErr.code === 'permission-denied') {
+        const code = (usageErr as { code?: string } | null)?.code;
+        if (code === 'permission-denied') {
           throw new Error('INFRASTRUCTURE_ERROR');
         }
         // If not a limit error, we might want to block anyway for security
@@ -106,7 +156,13 @@ const Home: React.FC = () => {
 
       if (password) {
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
-        saltStr = btoa(String.fromCharCode(...salt));
+        // Avoid String.fromCharCode(...salt) spread; chunked pattern is stack-safe
+        // for arbitrary lengths and produces identical base64.
+        let saltBinary = '';
+        for (let i = 0; i < salt.length; i++) {
+          saltBinary += String.fromCharCode(salt[i]);
+        }
+        saltStr = btoa(saltBinary);
         key = await deriveKeyFromPassword(password, salt);
       }
 
@@ -118,7 +174,7 @@ const Home: React.FC = () => {
         const zipObj: Record<string, Uint8Array> = {};
         for (const f of files) {
           totalSize += f.size;
-          if (totalSize > 6 * 1024 * 1024) throw new Error('Total files must be smaller than 6MB');
+          if (totalSize > 6 * 1024 * 1024) throw new Error('Your files together must be smaller than 6 MB.');
           const buffer = await f.arrayBuffer();
           zipObj[f.name] = new Uint8Array(buffer);
         }
@@ -163,7 +219,7 @@ const Home: React.FC = () => {
         })
       });
 
-      if (!resp.ok) throw new Error('Could not reach the server. Please try again.');
+      if (!resp.ok) throw new Error('We could not reach the server. Please try again in a moment.');
 
       const data = await resp.json();
       if (data.id) {
@@ -180,19 +236,19 @@ const Home: React.FC = () => {
         }
         navigate(`/s/${data.id}#${keyStr}`, { state: { adminKey: data.adminKey } });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      if (err.message === 'LIMIT_EXCEEDED') {
-        setError('Daily security quota reached (30/30). System lockdown active until 00:00 UTC reset.');
-      } else if (err.message === 'INFRASTRUCTURE_ERROR') {
-        setError('Infrastructure Error: The security governance API is currently unreachable. Please ensure Firestore is enabled in your Firebase console.');
-      } else if (err.message === 'SECURITY_CHECK_FAILED') {
-        setError('Security Check Failed: We could not verify your usage quota. Action blocked for system integrity.');
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'LIMIT_EXCEEDED') {
+        setError(`You have reached the daily limit of ${DAILY_SECRET_LIMIT} secrets. The counter resets at midnight UTC.`);
+      } else if (message === 'INFRASTRUCTURE_ERROR') {
+        setError('We could not reach the account service. If you self-host this app, make sure Firestore is enabled in your Firebase console.');
+      } else if (message === 'SECURITY_CHECK_FAILED') {
+        setError('We could not verify your usage. Please refresh the page and try again.');
       } else if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
-        setError('Cryptography API requires a secure context (HTTPS or localhost).');
+        setError('Encryption needs a secure connection. Open the site over HTTPS or localhost.');
       } else {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        setError(errorMessage);
+        setError(message || 'Something went wrong. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -201,12 +257,12 @@ const Home: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 space-y-6 slide-up" aria-live="polite">
-        <div className="lottie-themed w-48 h-48 md:w-64 md:h-64">
-          <LottieComponent animationData={shieldAnimation} loop={true} />
+      <div className="flex flex-col items-center justify-center py-12 md:py-16 space-y-6 slide-up" aria-live="polite">
+        <div className="lottie-themed w-56 h-56 md:w-72 md:h-72">
+          <LottieView animationData={shieldAnimation} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Encrypting…
+          Locking your message…
         </p>
       </div>
     );
@@ -217,10 +273,10 @@ const Home: React.FC = () => {
       {/* Page Header */}
       <div className="space-y-2 mb-8">
         <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-          Create Secret
+          Create a secret
         </h2>
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          Your message is encrypted in the browser before anything is sent. We never see your data.
+          Your message is locked inside this browser before anything reaches our servers. We never see what you typed.
         </p>
       </div>
 
@@ -249,9 +305,9 @@ const Home: React.FC = () => {
         <div className="flex justify-between items-center">
           <label htmlFor="message-input" className="label">Message</label>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium" style={{ color: 'var(--text-tertiary)' }}>Strength</span>
+            <span className="text-[10px] font-medium" style={{ color: 'var(--text-tertiary)' }}>Length</span>
             <div className="strength-bar">
-              <div className="strength-bar-fill" style={{ width: `${securityStrength}%` }} />
+              <div className="strength-bar-fill" style={{ width: `${messageFill}%` }} />
             </div>
           </div>
         </div>
@@ -259,36 +315,63 @@ const Home: React.FC = () => {
           id="message-input"
           className="w-full h-48 p-4 focus:outline-none resize-none mono text-sm"
           style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
-          placeholder="Type your private message here…"
+          placeholder="Type whatever you want to keep private…"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
       </div>
 
-      {/* File Upload */}
+      {/* File Upload (with drag-and-drop) */}
       <div className="space-y-2">
-        <label htmlFor="file-upload" className="label block">Attach files (max 6 MB total)</label>
-        <div className="relative">
+        <label htmlFor="file-upload" className="label block">Attach files (up to 6 MB combined)</label>
+        <div
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          className="relative p-3 transition-colors"
+          style={{
+            background: isDragging ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
+            border: `1px ${isDragging ? 'dashed' : 'solid'} ${isDragging ? 'var(--accent)' : 'var(--border-default)'}`,
+          }}
+        >
           <input
             id="file-upload"
             type="file"
             multiple
             onChange={handleFileChange}
-            className="w-full p-3 text-xs font-medium focus:outline-none cursor-pointer"
-            style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
+            className="w-full text-xs font-medium focus:outline-none cursor-pointer"
+            style={{ background: 'transparent', border: 'none' }}
           />
-          {files.length > 0 && (
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>
-              {files.length} file(s)
-            </span>
-          )}
+          <p className="text-[10px] mt-2" style={{ color: 'var(--text-tertiary)' }}>
+            {isDragging ? 'Release to attach the files.' : 'Or drag files anywhere onto this box.'}
+          </p>
         </div>
+        {files.length > 0 && (
+          <ul className="space-y-1 pt-1">
+            {files.map((f, i) => (
+              <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 px-3 py-2 text-xs" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)' }}>
+                <span className="truncate font-medium" style={{ color: 'var(--text-primary)' }}>{f.name}</span>
+                <span className="flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>{(f.size / 1024).toFixed(1)} KB</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(i)}
+                  className="text-[10px] font-bold uppercase underline flex-shrink-0"
+                  style={{ color: 'var(--text-danger)' }}
+                  aria-label={`Remove ${f.name}`}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Settings Grid */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label htmlFor="expiry-select" className="label block">Expiration</label>
+          <label htmlFor="expiry-select" className="label block">Auto-delete after</label>
           <select
             id="expiry-select"
             value={expiry}
@@ -302,7 +385,7 @@ const Home: React.FC = () => {
           </select>
         </div>
         <div className="space-y-2">
-          <label htmlFor="view-select" className="label block">View limit</label>
+          <label htmlFor="view-select" className="label block">Allow how many opens</label>
           <select
             id="view-select"
             value={viewLimit}
@@ -319,16 +402,41 @@ const Home: React.FC = () => {
 
       {/* Password */}
       <div className="space-y-2">
-        <label htmlFor="password-input" className="label block">Extra password (optional)</label>
+        <div className="flex justify-between items-center">
+          <label htmlFor="password-input" className="label">Add a password (optional)</label>
+          {passwordStrength.label !== 'empty' && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: STRENGTH_COLORS[passwordStrength.label] }}>
+                {STRENGTH_LABELS[passwordStrength.label]}
+              </span>
+              <div className="strength-bar" aria-hidden="true">
+                <div
+                  className="strength-bar-fill"
+                  style={{
+                    width: `${passwordStrength.score}%`,
+                    background: STRENGTH_COLORS[passwordStrength.label],
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         <input
           id="password-input"
           type="password"
-          placeholder="Add a password for additional security"
+          placeholder="A second lock the recipient must type before opening"
           className="w-full p-3 text-sm focus:outline-none"
           style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {passwordStrength.hints.length > 0 && (
+          <ul className="text-[10px] space-y-0.5 pt-1" style={{ color: 'var(--text-tertiary)' }}>
+            {passwordStrength.hints.map((hint) => (
+              <li key={hint}>• {hint}</li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Submit */}
@@ -338,7 +446,7 @@ const Home: React.FC = () => {
         className="btn btn-primary w-full text-xs tracking-widest uppercase"
         style={{ padding: '16px 24px' }}
       >
-        Generate Secure Link
+        Create Secret
       </button>
     </div>
   );

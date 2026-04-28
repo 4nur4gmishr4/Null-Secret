@@ -15,12 +15,18 @@ const Signup = React.lazy(() => import('./components/Signup'));
 const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
 const UsageHistory = React.lazy(() => import('./pages/UsageHistory'));
 const SecuritySettings = React.lazy(() => import('./pages/SecuritySettings'));
+const TwoFactorSetup = React.lazy(() => import('./pages/TwoFactorSetup'));
+const BiometricSetup = React.lazy(() => import('./pages/BiometricSetup'));
+const SessionTimeout = React.lazy(() => import('./pages/SessionTimeout'));
+const DeviceSessions = React.lazy(() => import('./pages/DeviceSessions'));
+const DestroyVault = React.lazy(() => import('./pages/DestroyVault'));
+const AccountSettings = React.lazy(() => import('./pages/AccountSettings'));
 
 const NotFound: React.FC = () => (
   <div className="text-center py-24 space-y-4 slide-up">
     <h2 className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>404</h2>
     <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-      This page doesn't exist or the secret has been destroyed.
+      We could not find this page. Either the link is wrong, or the secret it pointed to has already self-destructed.
     </p>
     <a
       href="/"
@@ -67,6 +73,12 @@ const App: React.FC = () => {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/history" element={<UsageHistory />} />
               <Route path="/security" element={<SecuritySettings />} />
+              <Route path="/security/2fa" element={<TwoFactorSetup />} />
+              <Route path="/security/biometric" element={<BiometricSetup />} />
+              <Route path="/security/timeout" element={<SessionTimeout />} />
+              <Route path="/security/sessions" element={<DeviceSessions />} />
+              <Route path="/security/destroy" element={<DestroyVault />} />
+              <Route path="/account" element={<AccountSettings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

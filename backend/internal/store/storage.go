@@ -1,9 +1,11 @@
 package store
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"hash/fnv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -11,7 +13,13 @@ import (
 	"null-secret/internal/models"
 )
 
-const maxSecretsPerShard = 100 // SEC-02: 256 shards * 100 = 25,600 secrets total limit
+const (
+	maxSecretsPerShard = 100 // SEC-02: 256 shards * 100 = 25,600 secrets total limit
+	rateLimitCapacity  = 10000
+	rateLimitWindow    = time.Minute
+	rateLimitMaxHits   = 10
+	rateLimitScanCap   = 100
+)
 
 var ErrCapacityExceeded = errors.New("server capacity exceeded, try again later")
 
@@ -30,66 +38,72 @@ func (rl *RateLimiter) Allow(ip string) bool {
 	defer rl.mu.Unlock()
 
 	now := time.Now()
-	window := now.Add(-1 * time.Minute)
+	cutoff := now.Add(-rateLimitWindow)
 
-	if len(rl.hits) > 10000 {
-		if _, exists := rl.hits[ip]; !exists {
-			freedSpace := false
-			scanCount := 0
-			for trackIP, hits := range rl.hits {
-				if len(hits) == 0 || hits[len(hits)-1].Before(window) {
-					delete(rl.hits, trackIP)
-					freedSpace = true
-					break
-				}
-				scanCount++
-				if scanCount > 100 {
-					break
-				}
-			}
-			if !freedSpace {
-				return false
-			}
+	if _, tracked := rl.hits[ip]; !tracked && len(rl.hits) >= rateLimitCapacity {
+		if !rl.evictOneExpiredLocked(cutoff) {
+			return false
 		}
 	}
 
-	var validHits []time.Time
+	kept := rl.hits[ip][:0]
 	for _, t := range rl.hits[ip] {
-		if t.After(window) {
-			validHits = append(validHits, t)
+		if t.After(cutoff) {
+			kept = append(kept, t)
 		}
 	}
 
-	if len(validHits) >= 10 { // 10 requests per minute
-		rl.hits[ip] = validHits
+	if len(kept) >= rateLimitMaxHits {
+		rl.hits[ip] = kept
 		return false
 	}
-
-	rl.hits[ip] = append(validHits, now)
+	rl.hits[ip] = append(kept, now)
 	return true
 }
 
-func (rl *RateLimiter) cleanup() {
-	ticker := time.NewTicker(5 * time.Minute)
-	for range ticker.C {
-		rl.mu.Lock()
-		now := time.Now()
-		window := now.Add(-1 * time.Minute)
-		
-		newHits := make(map[string][]time.Time)
-		for ip, hits := range rl.hits {
-			var validHits []time.Time
-			for _, t := range hits {
-				if t.After(window) {
-					validHits = append(validHits, t)
-				}
-			}
-			if len(validHits) > 0 {
-				newHits[ip] = validHits
+func (rl *RateLimiter) evictOneExpiredLocked(cutoff time.Time) bool {
+	scanned := 0
+	for trackedIP, hits := range rl.hits {
+		if scanned >= rateLimitScanCap {
+			return false
+		}
+		if len(hits) == 0 || hits[len(hits)-1].Before(cutoff) {
+			delete(rl.hits, trackedIP)
+			return true
+		}
+		scanned++
+	}
+	return false
+}
+
+func (rl *RateLimiter) evictExpired(cutoff time.Time) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	for ip, hits := range rl.hits {
+		kept := hits[:0]
+		for _, t := range hits {
+			if t.After(cutoff) {
+				kept = append(kept, t)
 			}
 		}
-		rl.hits = newHits
-		rl.mu.Unlock()
+		if len(kept) == 0 {
+			delete(rl.hits, ip)
+		} else {
+			rl.hits[ip] = kept
+		}
+	}
+}
+
+func (rl *RateLimiter) cleanup(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			rl.evictExpired(time.Now().Add(-rateLimitWindow))
+		}
 	}
 }
 
@@ -97,31 +111,39 @@ type Storage struct {
 	shards     [256]*Shard
 	Limiter    *RateLimiter
 	totalBytes atomic.Int64
+	cancel     context.CancelFunc
 }
 
 const maxGlobalBytes int64 = 250 * 1024 * 1024 // 250 MB
 
 func NewStorage() *Storage {
+	ctx, cancel := context.WithCancel(context.Background())
 	s := &Storage{
 		Limiter: &RateLimiter{hits: make(map[string][]time.Time)},
+		cancel:  cancel,
 	}
 	for i := 0; i < 256; i++ {
 		s.shards[i] = &Shard{
 			secrets: make(map[string]*models.Secret),
 		}
 	}
-	go s.startGC()
-	go s.Limiter.cleanup()
+	go s.startGC(ctx)
+	go s.Limiter.cleanup(ctx)
 	return s
 }
 
-func (s *Storage) getShard(id string) *Shard {
-	var hash uint32 = 2166136261
-	for i := 0; i < len(id); i++ {
-		hash ^= uint32(id[i])
-		hash *= 16777619
+// Close stops the background GC and rate-limiter cleanup goroutines.
+// Safe to call multiple times via context cancellation idempotency.
+func (s *Storage) Close() {
+	if s.cancel != nil {
+		s.cancel()
 	}
-	return s.shards[hash%256]
+}
+
+func (s *Storage) getShard(id string) *Shard {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(id))
+	return s.shards[h.Sum32()%256]
 }
 
 func generateID() (string, error) {
@@ -140,19 +162,28 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 		return "", "", errors.New("payload exceeds maximum allowed size (10MB)")
 	}
 
-	if s.totalBytes.Add(payloadLen) > maxGlobalBytes {
-		s.totalBytes.Add(-payloadLen) // Revert
-		return "", "", ErrCapacityExceeded
+	// CAS loop avoids spurious ErrCapacityExceeded on concurrent callers
+	// that would otherwise observe an inflated intermediate total during
+	// the optimistic Add-then-revert window.
+	for {
+		current := s.totalBytes.Load()
+		next := current + payloadLen
+		if next > maxGlobalBytes {
+			return "", "", ErrCapacityExceeded
+		}
+		if s.totalBytes.CompareAndSwap(current, next) {
+			break
+		}
 	}
 
 	id, err := generateID()
 	if err != nil {
-		s.totalBytes.Add(-payloadLen) // Revert
+		s.totalBytes.Add(-payloadLen)
 		return "", "", err
 	}
 	adminKey, err := generateID()
 	if err != nil {
-		s.totalBytes.Add(-payloadLen) // Revert
+		s.totalBytes.Add(-payloadLen)
 		return "", "", err
 	}
 	secret := &models.Secret{
@@ -166,20 +197,14 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 
 	shard := s.getShard(id)
 	shard.mu.Lock()
-	
-	// Prevent OOM per shard
 	if len(shard.secrets) >= maxSecretsPerShard {
-		shard.mu.Unlock()
-		s.gcShard(shard) // try to free space
-		
-		shard.mu.Lock()
+		s.gcShardLocked(shard)
 		if len(shard.secrets) >= maxSecretsPerShard {
 			shard.mu.Unlock()
-			s.totalBytes.Add(-payloadLen) // Revert
+			s.totalBytes.Add(-payloadLen)
 			return "", "", ErrCapacityExceeded
 		}
 	}
-	
 	shard.secrets[id] = secret
 	shard.mu.Unlock()
 
@@ -235,7 +260,7 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, bool) {
 	}
 
 	secret.Views++
-	
+
 	secretCopy := &models.Secret{
 		ID:        secret.ID,
 		Payload:   secret.Payload,
@@ -252,9 +277,10 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, bool) {
 	return secretCopy, true
 }
 
-func (s *Storage) gcShard(shard *Shard) {
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
+// gcShardLocked sweeps expired entries from a shard whose mutex is
+// already held by the caller. Used by Store to avoid lock-unlock-lock
+// TOCTOU where another writer could refill the shard between locks.
+func (s *Storage) gcShardLocked(shard *Shard) {
 	now := time.Now()
 	for id, secret := range shard.secrets {
 		if now.After(secret.ExpiresAt) {
@@ -264,11 +290,23 @@ func (s *Storage) gcShard(shard *Shard) {
 	}
 }
 
-func (s *Storage) startGC() {
+func (s *Storage) gcShard(shard *Shard) {
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
+	s.gcShardLocked(shard)
+}
+
+func (s *Storage) startGC(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Minute)
-	for range ticker.C {
-		for i := 0; i < 256; i++ {
-			s.gcShard(s.shards[i])
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			for i := 0; i < 256; i++ {
+				s.gcShard(s.shards[i])
+			}
 		}
 	}
 }

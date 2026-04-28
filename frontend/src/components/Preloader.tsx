@@ -1,10 +1,7 @@
-import { useState, useCallback } from 'react';
-import Lottie from 'lottie-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import LottieView from './LottieView';
 import shieldAnimation from '../assets/lotties/shield-morph.json';
 import DecryptedText from './DecryptedText';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LottieComponent = (Lottie as any).default || Lottie;
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -15,17 +12,27 @@ export default function Preloader({ onComplete }: PreloaderProps) {
   const [visible, setVisible] = useState(true);
   const COLUMNS = 6;
 
+  const exitTimerRef = useRef<number | null>(null);
+  const removeTimerRef = useRef<number | null>(null);
+
   const handleDecryptionComplete = useCallback(() => {
-    // Wait 500ms after text finishes, then start exit (stairs)
-    setTimeout(() => {
+    // Wait 500ms after text finishes, then start exit (stairs).
+    exitTimerRef.current = window.setTimeout(() => {
       setPhase('exit');
-      // Wait for exit animation to complete before removing from DOM
-      setTimeout(() => {
+      // Wait for exit animation to complete before removing from DOM.
+      removeTimerRef.current = window.setTimeout(() => {
         setVisible(false);
         onComplete();
       }, 1000);
     }, 500);
   }, [onComplete]);
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);
+      if (removeTimerRef.current !== null) window.clearTimeout(removeTimerRef.current);
+    };
+  }, []);
 
   if (!visible) return null;
 
@@ -43,7 +50,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       {/* Centered content */}
       <div className={`preloader-content ${phase === 'exit' ? 'preloader-fade-out' : ''}`}>
         <div className="w-32 h-32 mb-6 preloader-lottie">
-          <LottieComponent
+          <LottieView
             animationData={shieldAnimation}
             loop={false}
             autoplay={true}

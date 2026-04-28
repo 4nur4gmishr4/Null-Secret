@@ -4,6 +4,12 @@
  * and ciphertext padding to mitigate traffic analysis.
  */
 
+const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 minimum for PBKDF2-SHA256
+const AES_KEY_LENGTH_BYTES = 32;
+const AES_GCM_IV_LENGTH_BYTES = 12;
+const MIN_PBKDF2_SALT_BYTES = 16;
+const BASE64_CHUNK = 0x8000;
+
 export async function generateKey(): Promise<CryptoKey> {
   return window.crypto.subtle.generateKey(
     { name: 'AES-GCM', length: 256 },
@@ -12,11 +18,14 @@ export async function generateKey(): Promise<CryptoKey> {
   );
 }
 
-export async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
-  const enc = new TextEncoder();
+export async function deriveKeyFromPassword(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
+  if (!password) throw new Error('password is required');
+  if (salt.byteLength < MIN_PBKDF2_SALT_BYTES) {
+    throw new Error(`salt must be at least ${MIN_PBKDF2_SALT_BYTES} bytes`);
+  }
   const keyMaterial = await window.crypto.subtle.importKey(
     'raw',
-    enc.encode(password),
+    new TextEncoder().encode(password),
     'PBKDF2',
     false,
     ['deriveKey']
@@ -24,10 +33,9 @@ export async function deriveKeyFromPassword(password: string, salt: Uint8Array):
   return window.crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      salt: salt as any,
-      iterations: 100000,
-      hash: 'SHA-256'
+      salt,
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256',
     },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
@@ -38,14 +46,14 @@ export async function deriveKeyFromPassword(password: string, salt: Uint8Array):
 
 export async function exportKey(key: CryptoKey): Promise<string> {
   const exported = await window.crypto.subtle.exportKey('raw', key);
-  return btoa(String.fromCharCode(...new Uint8Array(exported)));
+  return arrayBufferToBase64(exported);
 }
 
 export async function importKey(keyStr: string): Promise<CryptoKey> {
-  const binary = atob(keyStr);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+  if (!keyStr) throw new Error('keyStr is required');
+  const bytes = base64ToUint8Array(keyStr);
+  if (bytes.byteLength !== AES_KEY_LENGTH_BYTES) {
+    throw new Error(`invalid AES-256 key length: ${bytes.byteLength}`);
   }
   return window.crypto.subtle.importKey(
     'raw',
@@ -82,30 +90,44 @@ function pad(text: string): string {
   return JSON.stringify({ d: text, p: 'x'.repeat(targetSize - size) });
 }
 
+interface PaddedEnvelope {
+  readonly d: string;
+  readonly p: string;
+}
+
+function isPaddedEnvelope(value: unknown): value is PaddedEnvelope {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as PaddedEnvelope).d === 'string' &&
+    typeof (value as PaddedEnvelope).p === 'string'
+  );
+}
+
 function unpad(paddedJson: string): string {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(paddedJson);
-    return parsed.d;
-  } catch {
-    return paddedJson;
+    parsed = JSON.parse(paddedJson);
+  } catch (cause) {
+    throw new Error('decryption produced non-JSON output', { cause });
   }
+  if (!isPaddedEnvelope(parsed)) {
+    throw new Error('decryption envelope schema invalid');
+  }
+  return parsed.d;
 }
 
-async function arrayBufferToBase64(buffer: ArrayBuffer): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const blob = new Blob([buffer], { type: 'application/octet-stream' });
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += BASE64_CHUNK) {
+    const chunk = bytes.subarray(offset, offset + BASE64_CHUNK);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  return btoa(binary);
 }
 
-function base64ToUint8Array(base64: string): Uint8Array {
+function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -115,43 +137,84 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
-export async function encrypt(text: string, key: CryptoKey): Promise<{ payload: string; iv: string }> {
+export interface EncryptedPayload {
+  readonly payload: string;
+  readonly iv: string;
+}
+
+export async function encrypt(text: string, key: CryptoKey): Promise<EncryptedPayload> {
   const paddedText = pad(text);
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const iv = window.crypto.getRandomValues(new Uint8Array(AES_GCM_IV_LENGTH_BYTES));
   const encoded = new TextEncoder().encode(paddedText);
-  
+
   const encrypted = await window.crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
     encoded
   );
 
-  const payloadStr = await arrayBufferToBase64(encrypted);
-  const ivStr = btoa(String.fromCharCode(...iv));
-
-  return { payload: payloadStr, iv: ivStr };
+  return {
+    payload: arrayBufferToBase64(encrypted),
+    iv: arrayBufferToBase64(iv.buffer.slice(iv.byteOffset, iv.byteOffset + iv.byteLength)),
+  };
 }
 
 export async function decrypt(payloadStr: string, ivStr: string, key: CryptoKey): Promise<string> {
   const payload = base64ToUint8Array(payloadStr);
   const iv = base64ToUint8Array(ivStr);
+  if (iv.byteLength !== AES_GCM_IV_LENGTH_BYTES) {
+    throw new Error(`invalid AES-GCM IV length: ${iv.byteLength}`);
+  }
 
-  const decrypted = await window.crypto.subtle.decrypt(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { name: 'AES-GCM', iv: iv as any },
-    key,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload as any
-  );
+  let decrypted: ArrayBuffer;
+  try {
+    decrypted = await window.crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      payload
+    );
+  } catch (cause) {
+    throw new Error('decryption failed: tag mismatch or wrong key', { cause });
+  }
 
-  const paddedJson = new TextDecoder().decode(decrypted);
-  return unpad(paddedJson);
+  return unpad(new TextDecoder().decode(decrypted));
+}
+
+export interface SecretBundle {
+  readonly p: string;
+  readonly i: string;
+  readonly s?: string;
 }
 
 export function bundle(payload: string, iv: string, salt?: string): string {
-  return btoa(JSON.stringify({ p: payload, i: iv, s: salt }));
+  const value: SecretBundle = { p: payload, i: iv, s: salt };
+  return btoa(JSON.stringify(value));
 }
 
-export function unbundle(bundled: string): { p: string; i: string; s?: string } {
-  return JSON.parse(atob(bundled));
+export function unbundle(bundled: string): SecretBundle {
+  let raw: string;
+  try {
+    raw = atob(bundled);
+  } catch (cause) {
+    throw new Error('bundle is not valid base64', { cause });
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (cause) {
+    throw new Error('bundle is not valid JSON', { cause });
+  }
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    typeof (parsed as SecretBundle).p !== 'string' ||
+    typeof (parsed as SecretBundle).i !== 'string'
+  ) {
+    throw new Error('bundle schema invalid');
+  }
+  const candidate = parsed as SecretBundle;
+  if (candidate.s !== undefined && typeof candidate.s !== 'string') {
+    throw new Error('bundle schema invalid');
+  }
+  return candidate;
 }

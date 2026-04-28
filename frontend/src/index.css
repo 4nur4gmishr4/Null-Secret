@@ -40,6 +40,7 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
   --font-logo: 'Savery', serif;
+  --header-h: 72px;
 }
 
 .dark {
@@ -66,6 +67,10 @@
   border-radius: 0 !important;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -77,6 +82,26 @@ body {
   font-size: 15px;
   line-height: 1.6;
   letter-spacing: -0.01em;
+}
+
+/* Any element using `.section-anchor` gets enough top room so a smooth-scroll
+   anchor jump leaves the heading visible below the sticky header. */
+.section-anchor {
+  scroll-margin-top: calc(var(--header-h) + 24px);
+}
+
+/* Opt-in subtle lift on hover for cards/buttons. Single source of truth. */
+.lift {
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lift:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.lift:active:not(:disabled) {
+  transform: translateY(0);
+  transition-duration: 0.06s;
 }
 
 /* ── Focus States ── */
@@ -276,6 +301,37 @@ button {
   }
 }
 
+/* Mobile menu open and close animations. The wrapper toggles the class. */
+.menu-open {
+  animation: menuSlideDown 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.menu-close {
+  animation: menuSlideUp 0.24s cubic-bezier(0.7, 0, 0.84, 0) both;
+}
+
+@keyframes menuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menuSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
 @keyframes marquee {
   0% {
     transform: translateX(100%);
@@ -319,8 +375,14 @@ select:focus, select:focus-visible, input:focus, input:focus-visible, textarea:f
   box-shadow: none !important;
 }
 
-button:hover, .btn:hover {
+/* Soft hover only on plain icon buttons that opt in. Styled buttons (.btn, .btn-primary, etc.) keep their own hover rules. */
+button.icon-soft:hover:not(:disabled) {
   opacity: 0.7;
+}
+
+/* Disabled buttons must look disabled, not just translucent. */
+button:disabled {
+  cursor: not-allowed;
 }
 
 .strength-bar-fill {
@@ -432,12 +494,13 @@ button:hover, .btn:hover {
   padding: 24px;
   border: 1px solid var(--border-default);
   background: var(--bg-elevated);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
 }
 
 .feature-card:hover {
   border-color: var(--border-strong);
   background: var(--bg-secondary);
+  transform: translateY(-2px);
 }
 
 /* ── Strength Bar ── */
@@ -534,7 +597,17 @@ button:hover, .btn:hover {
   100% { opacity: 1; }
 }
 
-@keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+/* ── Reduced-motion respect ──
+   Users who set their OS to "reduce motion" get the same UI without
+   transforms or fades. Color/background transitions stay because they
+   are not motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
