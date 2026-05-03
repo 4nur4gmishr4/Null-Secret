@@ -6,7 +6,7 @@ import Layout from './layouts/Layout';
 import Preloader from './components/Preloader';
 import ErrorBoundary from './components/ErrorBoundary';
 import { auth } from './utils/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
@@ -31,7 +31,7 @@ const AccountSettings = React.lazy(() => import('./pages/AccountSettings'));
 import { useToast } from './contexts/ToastContext';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = React.useState<any>(null);
+  const [user, setUser] = React.useState<User | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
