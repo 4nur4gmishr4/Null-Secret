@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
 import {
@@ -22,23 +22,21 @@ const OPTIONS: readonly Option[] = [
 
 const SessionTimeout: React.FC = () => {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState<SessionTimeoutOption>('15');
+  const [selected, setSelected] = useState<SessionTimeoutOption>(() => {
+    return String(readSessionTimeoutMinutes()) as SessionTimeoutOption;
+  });
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const persistedRef = useRef<string>('15');
-
-  useEffect(() => {
-    const current = String(readSessionTimeoutMinutes()) as SessionTimeoutOption;
-    setSelected(current);
-    persistedRef.current = current;
-  }, []);
+  const [persisted, setPersisted] = useState<SessionTimeoutOption>(() => {
+    return String(readSessionTimeoutMinutes()) as SessionTimeoutOption;
+  });
 
   const handleSave = useCallback(() => {
     writeSessionTimeoutMinutes(selected);
-    persistedRef.current = selected;
+    setPersisted(selected);
     setSavedAt(Date.now());
   }, [selected]);
 
-  const isDirty = persistedRef.current !== selected;
+  const isDirty = persisted !== selected;
 
   return (
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
