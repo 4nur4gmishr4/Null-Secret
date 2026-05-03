@@ -2,29 +2,38 @@
 
 A zero-knowledge, end-to-end encrypted secret-sharing service. The browser
 encrypts every message with **AES-256-GCM** before it leaves your device.
-The server only ever stores ciphertext, holds it in RAM (never on disk),
+The server only ever stores ciphertext, holds it in SQLite database,
 and deletes it the moment it expires or hits its view limit.
 
 ---
 
-## Table of contents
+## Table of Contents
 
-1. [What it does](#what-it-does)
-2. [Architecture](#architecture)
-3. [Project layout](#project-layout)
-4. [Local development](#local-development)
-5. [Production deployment](#production-deployment)
-6. [Configuration reference](#configuration-reference)
-7. [API reference](#api-reference)
-8. [Security model](#security-model)
-9. [Frontend feature map](#frontend-feature-map)
-10. [Roadmap](#roadmap)
-11. [Contributing](#contributing)
-12. [License](#license)
+- [Quick Start](#quick-start)
+- [What It Does](#what-it-does)
+- [Architecture](#architecture)
+- [Project Layout](#project-layout)
+- [Local Development](#local-development)
+- [Production Deployment](#production-deployment)
+- [Configuration Reference](#configuration-reference)
+- [API Reference](#api-reference)
+- [Security Model](#security-model)
+- [Frontend Feature Map](#frontend-feature-map)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## What it does
+## Quick Start
+
+**For users:** See [USER_GUIDE.md](./USER_GUIDE.md) for a simple, non-technical guide on how to use Null-Secret.
+
+**For developers:** Jump to [Local Development](#local-development) to get started.
+
+---
+
+## What It Does
 
 - Creates a **one-time link** (`/v/{id}#{key}`) that another person can open
   to read the message you sent.
@@ -81,14 +90,11 @@ quota counter, a history view, and account-level security settings.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Privacy properties** (math, not policy):
+**Privacy properties:**
 
-- The decryption key sits in the URL fragment. RFC 3986 says browsers
-  must not include it in the request line, so it never reaches our
-  server, our reverse proxy, or any CDN in between.
-- The Go server holds ciphertext in SQLite database. A reboot wipes everything.
-- The Firestore write only stores the secret **ID and timestamp**, not
-  the ciphertext, key, or any user content.
+- Decryption key travels in URL fragment (never sent to server per RFC 3986)
+- Server holds only encrypted ciphertext in SQLite database
+- Firestore stores only secret ID and timestamp (never content or keys)
 
 ---
 
@@ -450,30 +456,29 @@ keep-alive cron.
 
 ---
 
-## Security model
+## Security Model
 
 | Layer                     | Mechanism                                                         |
 |---------------------------|-------------------------------------------------------------------|
 | Confidentiality           | AES-256-GCM via `window.crypto.subtle`                            |
 | Integrity / authenticity  | GCM authentication tag (rejects any tampering)                    |
 | Key delivery              | URL fragment (RFC 3986 §3.5: never sent to server)                |
-| Optional second factor    | PBKDF2-HMAC-SHA256 with **600 000** iterations                    |
-| Traffic-analysis resistance | Ciphertext padded to `1 KB / 5 KB / 10 KB / 100 KB` buckets    |
+| Optional second factor    | PBKDF2-HMAC-SHA256 with 600,000 iterations                         |
+| Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB / 100 KB buckets     |
 | Transport                 | HSTS preload, X-Content-Type-Options, X-Frame-Options DENY        |
 | Content security          | Locked-down CSP with `connect-src` whitelist                      |
 | Rate limiting             | 100 req/sec global, per-IP limits                                 |
 | Storage                   | SQLite database with automatic GC on TTL or view-limit hit        |
 | Account deletion          | `Destroy Vault` deletes Firestore data + Firebase Auth user       |
 
-What we deliberately do **not** collect or store:
+**What we do NOT collect or store:**
 
-- IP addresses (used in memory only for rate limiting; never written down)
+- IP addresses (in-memory only for rate limiting; never written down)
 - Trackers, marketing scripts, third-party analytics
-- The plaintext message, the encryption key, or the optional password
-- Any link between a sign-in identity and a secret beyond an opaque
-  Firestore record of the **secret ID** and **creation timestamp**
+- Plaintext messages, encryption keys, or optional passwords
+- Any link between sign-in identity and secret content (only ID and timestamp stored)
 
-The full plain-language story is on the in-app `/privacy` page.
+See the in-app `/privacy` page for the full plain-language story.
 
 ---
 

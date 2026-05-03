@@ -1,5 +1,32 @@
 # Null-Secret User Guide
 
+## Table of Contents
+
+- [What is Null-Secret?](#what-is-null-secret)
+- [What can you share?](#what-can-you-share)
+- [How it works](#how-it-works)
+  - [For the sender](#for-the-sender)
+  - [For the recipient](#for-the-recipient)
+- [Key Features](#key-features)
+  - [No account required](#no-account-required)
+  - [Self-destructing messages](#self-destructing-messages)
+  - [End-to-end encryption](#end-to-end-encryption)
+  - [Optional password protection](#optional-password-protection)
+  - [File attachments](#file-attachments)
+- [Security Explained Simply](#security-explained-simply)
+- [Optional Account Features](#optional-account-features)
+  - [Daily quota](#daily-quota)
+  - [History tracking](#history-tracking)
+  - [Security settings](#security-settings)
+- [Common Use Cases](#common-use-cases)
+- [Tips for Maximum Security](#tips-for-maximum-security)
+- [What happens if...](#what-happens-if)
+- [Troubleshooting](#troubleshooting)
+- [Getting Help](#getting-help)
+- [Remember](#remember)
+
+---
+
 ## What is Null-Secret?
 
 Null-Secret is a secure way to share private information that self-destructs after being read. Think of it like a digital message that burns itself after the recipient sees it.
