@@ -575,6 +575,6 @@ Tests and the production build must succeed before a PR is merged.
 
 ## License
 
-Proprietary software developed by **Anurag Mishra**. All rights
+Proprietary software designed, developed, and managed by **Anurag Mishra**. All rights
 reserved. See [Privacy Manifesto](https://github.com/4nur4gmishr4/Null-Secret#)
 in-app for the privacy contract with users.
