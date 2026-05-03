@@ -510,6 +510,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   { label: 'Home', path: '/' },
                   { label: 'Create Secret', path: '/app', protected: true },
                   { label: 'Privacy', path: '/privacy' },
+                  { label: 'Terms of Service', path: '/terms' },
                 ].map((item) => {
                   const active = location.pathname === item.path;
                   return (
@@ -541,106 +542,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   );
                 })}
               </ul>
-            </nav>
-
-            {/* External links */}
-            <nav aria-label="External" className="pt-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] font-bold mb-4" style={{ color: 'var(--text-tertiary)' }}>Resources</p>
-              <ul className="space-y-0">
-                {[
-                  { label: 'Documentation', url: 'https://github.com/4nur4gmishr4/Null-Secret/blob/main/README.md', external: true },
-                  { label: 'GitHub Repository', url: 'https://github.com/4nur4gmishr4/Null-Secret', external: true },
-                  { label: 'User Guide', url: 'https://github.com/4nur4gmishr4/Null-Secret/blob/main/USER_GUIDE.md', external: true },
-                  { label: 'Support', url: 'https://github.com/4nur4gmishr4/Null-Secret/issues', external: true },
-                ].map((item) => (
-                  <li key={item.url}>
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group w-full flex items-center justify-between py-4 text-left text-sm font-bold border-b transition-colors"
-                      style={{ borderColor: 'var(--border-default)' }}
-                    >
-                      <span>{item.label}</span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-tertiary)' }} className="transition-transform group-hover:translate-x-0.5">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-
-            {/* Theme toggle in mobile menu */}
-            <nav aria-label="Theme" className="pt-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] font-bold mb-4" style={{ color: 'var(--text-tertiary)' }}>Appearance</p>
-              <button
-                onClick={cycleTheme}
-                className="w-full flex items-center justify-between py-4 text-left text-sm font-bold border-b transition-colors"
-                style={{ borderColor: 'var(--border-default)' }}
-              >
-                <span>Theme: {PREF_LABEL[preference]}</span>
-                <ThemeIcon preference={preference} />
-              </button>
-            </nav>
-
-            {/* Legal links */}
-            <nav aria-label="Legal" className="pt-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] font-bold mb-4" style={{ color: 'var(--text-tertiary)' }}>Legal</p>
-              <ul className="space-y-0">
-                {[
-                  { label: 'Privacy Policy', url: '/privacy', external: false },
-                  { label: 'Terms of Service', url: 'https://github.com/4nur4gmishr4/Null-Secret/blob/main/LICENSE', external: true },
-                ].map((item) => (
-                  <li key={item.url}>
-                    {item.external ? (
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group w-full flex items-center justify-between py-4 text-left text-sm font-bold border-b transition-colors"
-                        style={{ borderColor: 'var(--border-default)' }}
-                      >
-                        <span>{item.label}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-tertiary)' }} className="transition-transform group-hover:translate-x-0.5">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                          <polyline points="15 3 21 3 21 9" />
-                          <line x1="10" y1="14" x2="21" y2="3" />
-                        </svg>
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => { closeMobileMenu(); navigate(item.url); }}
-                        className="group w-full flex items-center justify-between py-4 text-left text-sm font-bold border-b transition-colors"
-                        style={{ borderColor: 'var(--border-default)' }}
-                      >
-                        <span>{item.label}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-tertiary)' }} className="transition-transform group-hover:translate-x-0.5">
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </nav>
-
-            {/* Contact */}
-            <nav aria-label="Contact" className="pt-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] font-bold mb-4" style={{ color: 'var(--text-tertiary)' }}>Contact</p>
-              <a
-                href="mailto:anuragmishrasnag06082004@gmail.com"
-                className="group w-full flex items-center justify-between py-4 text-left text-sm font-bold border-b transition-colors"
-                style={{ borderColor: 'var(--border-default)' }}
-              >
-                <span>Email</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-tertiary)' }} className="transition-transform group-hover:translate-x-0.5">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-              </a>
             </nav>
 
             {/* Account section, signed-in only */}
