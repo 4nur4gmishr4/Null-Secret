@@ -1,4 +1,6 @@
-# Binaries
+# ─────────────────────────────────────────────────────────────
+# Build output & compiled binaries
+# ─────────────────────────────────────────────────────────────
 *.exe
 *.exe~
 *.dll
@@ -6,62 +8,127 @@
 *.dylib
 *.test
 *.out
+*.tsbuildinfo
+*.stackdump
 
 # Go
 go.work
 go.work.sum
+vendor/
 
-# Node
+# Node / bundler output
 node_modules/
 dist/
-.vite/
+dist-ssr/
 build/
+out/
+.next/
+.nuxt/
+.turbo/
+.vite/
 .cache/
+.parcel-cache/
+.rollup.cache/
 
-# Environment
+# PWA / Workbox generated
+**/sw.js
+**/workbox-*.js
+!frontend/src/**/sw.js
+
+# ─────────────────────────────────────────────────────────────
+# Environment & secrets
+#   .env.example IS committed so contributors can bootstrap.
+# ─────────────────────────────────────────────────────────────
 .env
-.env.local
-.env.production
-.env.example
-.env.development
-.env.test
+.env.*
+!.env.example
+*.pem
+*.key
+!**/*.pub.key
+secrets.json
+.credentials/
 
-# Databases
+# ─────────────────────────────────────────────────────────────
+# Databases & backups (runtime state, never committed)
+# ─────────────────────────────────────────────────────────────
 *.db
 *.db-shm
 *.db-wal
 *.sqlite
 *.sqlite3
+backup.db
+dump.rdb
 
-# IDE
+# ─────────────────────────────────────────────────────────────
+# IDE / editor
+# ─────────────────────────────────────────────────────────────
 .idea/
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.sample
 *.swp
 *.swo
 *~
 *.sublime-project
 *.sublime-workspace
+.project
+.classpath
+.settings/
 
-# OS
+# ─────────────────────────────────────────────────────────────
+# Operating system
+# ─────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
+# ─────────────────────────────────────────────────────────────
 # Logs
+# ─────────────────────────────────────────────────────────────
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Testing
+# ─────────────────────────────────────────────────────────────
+# Testing & coverage
+# ─────────────────────────────────────────────────────────────
 coverage/
+*.lcov
 .nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+junit.xml
 
+# ─────────────────────────────────────────────────────────────
+# TypeScript / JS tooling
+# ─────────────────────────────────────────────────────────────
+*.tgz
+.eslintcache
+.stylelintcache
+.tsbuildinfo
+
+# ─────────────────────────────────────────────────────────────
 # Misc
+# ─────────────────────────────────────────────────────────────
 *.pid
 *.seed
 *.pid.lock
+tmp/
+temp/
+.history/
 
-# Build artifacts
-*.tsbuildinfo
+# ─────────────────────────────────────────────────────────────
+# Allow-list overrides
+# ─────────────────────────────────────────────────────────────
+!.gitkeep
