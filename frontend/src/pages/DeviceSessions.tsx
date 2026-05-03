@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LottieView from '../components/LottieView';
+import SecurityPageHeader from '../components/SecurityPageHeader';
+import BackLink from '../components/BackLink';
 import { auth } from '../utils/firebase';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import privacylockData from '../assets/lotties/privacylock.json';
 
 interface CurrentDevice {
   readonly label: string;
@@ -76,21 +76,14 @@ const DeviceSessions: React.FC = () => {
 
   return (
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
-      <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
-        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
-          <LottieView animationData={privacylockData} loop={true} />
-        </div>
-        <div className="space-y-4 text-center md:text-left">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Cryptographic Session</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Device Sessions</h1>
-          <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Your current sign-in session, plus a quick way to sign out from this browser.
-          </p>
-        </div>
-      </div>
+      <SecurityPageHeader
+        eyebrow="Cryptographic Session"
+        title="Device Sessions"
+        description="Your current sign-in session, plus a quick way to sign out from this browser."
+      />
 
       <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>This device</h3>
+        <h3 className="section-title" style={{ color: 'var(--text-primary)' }}>This device</h3>
         {device && user && (
           <div className="p-6 border space-y-3" style={{ borderColor: 'var(--border-default)' }}>
             <div className="flex items-start justify-between gap-4">
@@ -124,9 +117,7 @@ const DeviceSessions: React.FC = () => {
         </p>
       </div>
 
-      <div className="pt-8 text-center">
-        <button onClick={() => navigate('/security')} className="text-xs font-bold uppercase tracking-widest underline" style={{ color: 'var(--text-tertiary)' }}>Back to Security</button>
-      </div>
+      <BackLink to="/security" />
     </div>
   );
 };

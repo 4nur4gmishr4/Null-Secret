@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LottieView from '../components/LottieView';
+import SecurityPageHeader from '../components/SecurityPageHeader';
 import { auth } from '../utils/firebase';
-import privacylockData from '../assets/lotties/privacylock.json';
 import {
   onAuthStateChanged,
   updateProfile,
@@ -113,18 +112,11 @@ const AccountSettings: React.FC = () => {
 
   return (
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
-      <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
-        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
-          <LottieView animationData={privacylockData} loop={true} />
-        </div>
-        <div className="space-y-4 text-center md:text-left">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Account</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Profile</h1>
-          <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Your account details. Anything you change here only affects how you sign in. Your secrets stay encrypted on your device.
-          </p>
-        </div>
-      </div>
+      <SecurityPageHeader
+        eyebrow="Account"
+        title="Profile"
+        description="Your account details. Anything you change here only affects how you sign in. Your secrets stay encrypted on your device."
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="p-8 border space-y-6" style={{ borderColor: 'var(--border-default)' }}>
