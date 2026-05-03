@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../utils/firebase';
+import { friendlyAuthError } from '../utils/authErrors';
 import AuthLayout from './AuthLayout';
 
 export default function ForgotPassword() {
@@ -19,7 +20,7 @@ export default function ForgotPassword() {
                 'We just sent you a password reset email. Check your inbox in a minute or two, including the spam folder.'
             );
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Failed to send reset email');
+            setError(friendlyAuthError(err, 'We could not send the reset email. Please try again.'));
         }
     };
 
