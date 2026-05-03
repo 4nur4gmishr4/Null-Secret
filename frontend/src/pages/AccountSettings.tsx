@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
 import { auth } from '../utils/firebase';
+import { friendlyAuthError } from '../utils/authErrors';
 import {
   onAuthStateChanged,
   updateProfile,
@@ -14,16 +15,7 @@ type Status = { kind: 'idle' | 'success' | 'error'; message: string };
 const IDLE: Status = { kind: 'idle', message: '' };
 
 function describeAuthError(err: unknown): string {
-  if (err instanceof Error) {
-    const msg = err.message;
-    if (msg.includes('requires-recent-login')) {
-      return 'For your safety we need a fresh sign-in before changing your email. Sign out and sign back in, then try again.';
-    }
-    if (msg.includes('invalid-email')) return 'That email does not look right. Check the spelling.';
-    if (msg.includes('email-already-in-use')) return 'Another account already uses that email.';
-    return msg;
-  }
-  return 'Something went wrong.';
+  return friendlyAuthError(err, 'Something went wrong. Please try again.');
 }
 
 const AccountSettings: React.FC = () => {

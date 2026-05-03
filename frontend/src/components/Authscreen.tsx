@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, googleProvider } from '../utils/firebase';
+import { friendlyAuthError } from '../utils/authErrors';
 import AuthLayout from './AuthLayout';
 import GoogleSignInButton from './GoogleSignInButton';
 import PasswordInput from './PasswordInput';
@@ -13,21 +14,23 @@ export default function Authscreen() {
     const navigate = useNavigate();
 
     const handleGoogleSignIn = async () => {
+        setError(null);
         try {
             await signInWithPopup(auth, googleProvider);
             navigate('/app');
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Sign-in failed');
+            setError(friendlyAuthError(err, 'Sign-in failed. Please try again.'));
         }
     };
 
     const handleEmailSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
         try {
             await signInWithEmailAndPassword(auth, email, password);
             navigate('/app');
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Sign-in failed');
+            setError(friendlyAuthError(err, 'Sign-in failed. Please try again.'));
         }
     };
 
