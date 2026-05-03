@@ -7,6 +7,7 @@ import Preloader from './components/Preloader';
 import ErrorBoundary from './components/ErrorBoundary';
 import { auth } from './utils/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { Analytics } from '@vercel/analytics/react';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
@@ -152,6 +153,7 @@ const App: React.FC = () => {
         </Layout>
       </Router>
       </ToastProvider>
+      <Analytics />
     </ThemeProvider>
   );
 };
