@@ -7,7 +7,12 @@ import (
 )
 
 func TestStorage_StoreAndRetrieve(t *testing.T) {
-	store := NewStorage()
+	dummyKey := make([]byte, 32)
+	store, err := NewStorage("file::memory:?cache=shared", dummyKey, ".")
+	if err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+	defer store.Close()
 	payload := []byte("test-secret-payload")
 	
 	id, _, err := store.Store(payload, 1, 1)
@@ -15,9 +20,9 @@ func TestStorage_StoreAndRetrieve(t *testing.T) {
 		t.Fatalf("failed to store secret: %v", err)
 	}
 	
-	secret, ok := store.RetrieveAndDelete(id)
-	if !ok {
-		t.Fatalf("failed to retrieve secret")
+	secret, err := store.RetrieveAndDelete(id)
+	if err != nil {
+		t.Fatalf("failed to retrieve secret: %v", err)
 	}
 	
 	if !bytes.Equal(secret.Payload, payload) {
@@ -25,14 +30,19 @@ func TestStorage_StoreAndRetrieve(t *testing.T) {
 	}
 	
 	// Verify it was deleted
-	_, ok2 := store.RetrieveAndDelete(id)
-	if ok2 {
+	_, err = store.RetrieveAndDelete(id)
+	if err == nil {
 		t.Errorf("secret was not deleted after retrieval")
 	}
 }
 
 func TestStorage_Concurrency(t *testing.T) {
-	store := NewStorage()
+	dummyKey := make([]byte, 32)
+	store, err := NewStorage("file::memory:?cache=shared", dummyKey, ".")
+	if err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+	defer store.Close()
 	payload := []byte("concurrent-test")
 	
 	id, _, err := store.Store(payload, 1, 1)
@@ -48,8 +58,8 @@ func TestStorage_Concurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, ok := store.RetrieveAndDelete(id)
-			if ok {
+			_, err := store.RetrieveAndDelete(id)
+			if err == nil {
 				mu.Lock()
 				successes++
 				mu.Unlock()

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import LottieView from './LottieView';
-import shieldAnimation from '../assets/lotties/shield-morph.json';
 import DecryptedText from './DecryptedText';
+import shieldMorphData from '../assets/lotties/shield-morph.json';
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -51,7 +51,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       <div className={`preloader-content ${phase === 'exit' ? 'preloader-fade-out' : ''}`}>
         <div className="w-32 h-32 mb-6 preloader-lottie">
           <LottieView
-            animationData={shieldAnimation}
+            animationData={shieldMorphData}
             loop={false}
             autoplay={true}
           />

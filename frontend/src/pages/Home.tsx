@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
+import { FileDropzone } from '../components/FileDropzone';
 import { generateKey, deriveKeyFromPassword, exportKey, encrypt, bundle } from '../utils/crypto';
-import shieldAnimation from '../assets/lotties/shield-morph.json';
 import { auth, db } from '../utils/firebase';
 import {
   doc,
@@ -14,8 +14,8 @@ import {
 import { zipSync } from 'fflate';
 import { DAILY_SECRET_LIMIT } from '../utils/constants';
 import { estimatePasswordStrength, type StrengthLabel } from '../utils/passwordStrength';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
+import { API_BASE } from '../utils/api';
+import shieldMorphData from '../assets/lotties/shield-morph.json';
 
 const STRENGTH_LABELS: Record<StrengthLabel, string> = {
   empty: '',
@@ -49,37 +49,8 @@ const Home: React.FC = () => {
   const messageFill = Math.min((text.length / 500) * 100, 100);
   const passwordStrength = estimatePasswordStrength(password);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
-    }
-  };
-
-  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only flip back when leaving the wrapper, not its children.
-    if (e.currentTarget === e.target) setIsDragging(false);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
-    setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+  const handleFilesAdded = useCallback((newFiles: File[]) => {
+    setFiles(prev => [...prev, ...newFiles]);
   }, []);
 
   const removeFile = useCallback((index: number) => {
@@ -125,6 +96,10 @@ const Home: React.FC = () => {
           });
         } else {
           // Local Storage Fallback for Guests
+          // NOTE: Guest rate limiting via localStorage is advisory only.
+          // The server's per-IP rate limiter (store.Limiter) is the true enforcement
+          // mechanism. A determined user can bypass localStorage tracking by clearing
+          // storage or using incognito mode.
           const usageData = localStorage.getItem('ns_usage');
           let count = 0;
           if (usageData) {
@@ -190,7 +165,7 @@ const Home: React.FC = () => {
           fileData = { name: files[0].name, type: files[0].type, data: `data:${files[0].type || 'application/octet-stream'};base64,${fileBase64}` };
         } else {
           const zipped = zipSync(zipObj);
-          const blob = new Blob([zipped as any], { type: 'application/zip' });
+          const blob = new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/zip' });
           const reader = new FileReader();
           const zipBase64 = await new Promise<string>((resolve, reject) => {
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -211,7 +186,10 @@ const Home: React.FC = () => {
 
       const resp = await fetch(`${API_BASE}/secret`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({
           payload: bundled,
           expiry: parseInt(expiry),
@@ -259,7 +237,7 @@ const Home: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-12 md:py-16 space-y-6 slide-up" aria-live="polite">
         <div className="lottie-themed w-56 h-56 md:w-72 md:h-72">
-          <LottieView animationData={shieldAnimation} loop={true} />
+          <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
           Locking your message…
@@ -322,51 +300,13 @@ const Home: React.FC = () => {
       </div>
 
       {/* File Upload (with drag-and-drop) */}
-      <div className="space-y-2">
-        <label htmlFor="file-upload" className="label block">Attach files (up to 6 MB combined)</label>
-        <div
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          className="relative p-3 transition-colors"
-          style={{
-            background: isDragging ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-            border: `1px ${isDragging ? 'dashed' : 'solid'} ${isDragging ? 'var(--accent)' : 'var(--border-default)'}`,
-          }}
-        >
-          <input
-            id="file-upload"
-            type="file"
-            multiple
-            onChange={handleFileChange}
-            className="w-full text-xs font-medium focus:outline-none cursor-pointer"
-            style={{ background: 'transparent', border: 'none' }}
-          />
-          <p className="text-[10px] mt-2" style={{ color: 'var(--text-tertiary)' }}>
-            {isDragging ? 'Release to attach the files.' : 'Or drag files anywhere onto this box.'}
-          </p>
-        </div>
-        {files.length > 0 && (
-          <ul className="space-y-1 pt-1">
-            {files.map((f, i) => (
-              <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 px-3 py-2 text-xs" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)' }}>
-                <span className="truncate font-medium" style={{ color: 'var(--text-primary)' }}>{f.name}</span>
-                <span className="flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>{(f.size / 1024).toFixed(1)} KB</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(i)}
-                  className="text-[10px] font-bold uppercase underline flex-shrink-0"
-                  style={{ color: 'var(--text-danger)' }}
-                  aria-label={`Remove ${f.name}`}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <FileDropzone
+        files={files}
+        isDragging={isDragging}
+        setIsDragging={setIsDragging}
+        onFilesAdded={handleFilesAdded}
+        onFileRemoved={removeFile}
+      />
 
       {/* Settings Grid */}
       <div className="grid grid-cols-2 gap-4">

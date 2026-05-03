@@ -4,10 +4,10 @@ export default function Footer() {
     const navigate = useNavigate();
 
     return (
-        <div className="w-full flex flex-col justify-center relative overflow-hidden font-sans pt-8 md:pt-12 pb-16 md:pb-24 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        <div className="w-full flex flex-col justify-center font-sans pt-8 md:pt-12 pb-24 md:pb-[18rem] px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
 
             {/* Main Footer Card */}
-            <div className="w-full max-w-4xl mx-auto border rounded-3xl p-8 lg:p-12 z-10 relative shadow-2xl" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)' }}>
+            <div className="w-full max-w-4xl mx-auto border p-8 lg:p-12 z-10 relative shadow-2xl" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)' }}>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-y-8 lg:gap-y-0">
 
                     {/* Column 1: Branding */}
@@ -72,12 +72,18 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Massive Background Text */}
-            <div className="absolute bottom-0 left-0 w-full flex items-end overflow-hidden opacity-[0.05] md:opacity-[0.12] pointer-events-none select-none z-0 pb-2">
-                <span className="text-[15vw] leading-[0.8] tracking-widest uppercase whitespace-nowrap font-logo animate-marquee" style={{ color: 'var(--text-primary)', filter: 'blur(1px)' }}>
-                    NULL-SECRET
-                </span>
+            {/* Background Marquee */}
+            <div className="absolute bottom-4 md:bottom-8 left-0 w-full overflow-hidden pointer-events-none select-none z-0 opacity-5 dark:opacity-10">
+                <div className="animate-marquee-seamless w-max">
+                    <span className="font-logo text-[18vw] leading-none uppercase pr-8">
+                        NULL-SECRET NULL-SECRET NULL-SECRET NULL-SECRET NULL-SECRET NULL-SECRET
+                    </span>
+                    <span className="font-logo text-[18vw] leading-none uppercase pr-8" aria-hidden="true">
+                        NULL-SECRET NULL-SECRET NULL-SECRET NULL-SECRET NULL-SECRET NULL-SECRET
+                    </span>
+                </div>
             </div>
+
         </div>
     );
 }
