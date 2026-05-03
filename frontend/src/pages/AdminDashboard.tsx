@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import LottieView from '../components/LottieView';
-import shieldAnimation from '../assets/lotties/shield-morph.json';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
+import Skeleton from '../components/Skeleton';
+import { API_BASE } from '../utils/api';
+import { useToast } from '../contexts/ToastContext';
 
 const AdminDashboard: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  // SECURITY NOTE: The admin key is stored in sessionStorage for UX convenience.
+  // If this page is exposed to XSS, admin keys for all managed secrets in this
+  // session could leak. For higher security, consider backend-issued session
+  // tokens tied to the user's Firebase auth rather than raw admin keys.
   let adminKey = location.hash.replace('#', '');
   if (!adminKey && id) {
-    const keys = JSON.parse(localStorage.getItem('nullSecret_adminKeys') || '{}');
+    const keys = JSON.parse(sessionStorage.getItem('nullSecret_adminKeys') || '{}');
     adminKey = keys[id] || '';
   }
 
@@ -19,26 +22,30 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [burning, setBurning] = useState(false);
-
-  const fetchInfo = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/secret/${id}/info`, {
-        headers: { 'X-Admin-Key': adminKey },
-      });
-      if (!res.ok) throw new Error('We could not find this secret. The admin link may be wrong, or the message has already self-destructed.');
-      const data = await res.json();
-      setInfo(data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchInfo();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/secret/${id}/info`, {
+          headers: { 'X-Admin-Key': adminKey },
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error('We could not find this secret. The admin link may be wrong, or the message has already self-destructed.');
+        const data = await res.json();
+        setInfo(data);
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [id, adminKey]);
 
   const handleBurn = async () => {
     if (!window.confirm('Delete this secret right now, before anyone reads it? This cannot be undone.')) return;
@@ -46,13 +53,18 @@ const AdminDashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/secret/${id}`, {
         method: 'DELETE',
-        headers: { 'X-Admin-Key': adminKey },
+        headers: {
+          'X-Admin-Key': adminKey,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/json',
+        },
       });
       if (!res.ok) throw new Error('We could not delete this secret. Please try again.');
       setInfo(null);
       setError('Secret deleted. The link no longer works for anyone.');
+      toast('Secret permanently destroyed', 'success');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Burn failed');
+      toast(err instanceof Error ? err.message : 'Burn failed', 'error');
     } finally {
       setBurning(false);
     }
@@ -60,13 +72,23 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 md:py-16 space-y-6 slide-up" aria-live="polite">
-        <div className="lottie-themed w-56 h-56 md:w-72 md:h-72">
-          <LottieView animationData={shieldAnimation} loop={true} />
+      <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" aria-live="polite">
+        <div className="space-y-2 mb-8">
+          <Skeleton width="200px" height="24px" />
+          <Skeleton width="320px" height="14px" />
         </div>
-        <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Loading status…
-        </p>
+        <div style={{ border: '1px solid var(--border-default)' }}>
+          <div className="p-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <Skeleton width="100%" height="16px" />
+          </div>
+          <div className="p-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <Skeleton width="100%" height="16px" />
+          </div>
+          <div className="p-4">
+            <Skeleton width="100%" height="16px" />
+          </div>
+        </div>
+        <Skeleton width="100%" height="48px" />
       </div>
     );
   }

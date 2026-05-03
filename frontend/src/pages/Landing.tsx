@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import InViewLottie from '../components/InViewLottie';
-import privacyFull from '../assets/lotties/privacyfull.json';
+import privacyfullData from '../assets/lotties/privacyfull.json';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -19,10 +19,10 @@ const Landing: React.FC = () => {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold tracking-tighter leading-[1.2]" style={{ color: 'var(--text-primary)' }}>
-            Send anything private.
+            Send anything private
             <br />
             <span style={{ color: 'var(--text-secondary)' }}>
-              No traces left behind.
+              No traces left behind
             </span>
           </h1>
 
@@ -81,9 +81,6 @@ const Landing: React.FC = () => {
             <div
               key={i}
               className="feature-card"
-              style={{
-                borderRight: i < 2 ? undefined : undefined,
-              }}
             >
               <div className="flex items-center gap-3 mb-4">
                 <span className="mono text-[11px] font-medium px-2 py-1" style={{ color: 'var(--text-tertiary)', border: `1px solid var(--border-default)` }}>
@@ -105,7 +102,7 @@ const Landing: React.FC = () => {
       <section className="py-12 md:py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
           <div className="lottie-themed w-full max-w-[450px] md:max-w-[600px] lg:max-w-[700px] aspect-square flex-shrink-0 mx-auto">
-            <InViewLottie animationData={privacyFull} loop={true} />
+            <InViewLottie animationData={privacyfullData} loop={true} />
           </div>
           <div className="space-y-4 text-center md:text-left">
             <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>

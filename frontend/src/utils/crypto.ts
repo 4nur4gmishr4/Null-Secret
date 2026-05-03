@@ -71,23 +71,26 @@ export async function importKey(keyStr: string): Promise<CryptoKey> {
 function pad(text: string): string {
   const buckets = [1024, 5120, 10240];
   const encoder = new TextEncoder();
-  const encoded = encoder.encode(text);
-  const size = encoded.length;
 
-  let targetSize = size;
+  // Measure the total size including the JSON envelope overhead:
+  // {"d":"<text>","p":""}  →  overhead ≈ 12 + any JSON-escaping of `text`
+  const envelopeBase = encoder.encode(JSON.stringify({ d: text, p: '' })).length;
+
+  let targetSize = envelopeBase;
   for (const b of buckets) {
-    if (size <= b) {
+    if (envelopeBase <= b) {
       targetSize = b;
       break;
     }
   }
 
-  if (targetSize === size) {
-    // If it exceeds the largest bucket, we pad to the nearest 10KB boundary.
-    targetSize = Math.ceil(size / 10240) * 10240;
+  if (targetSize === envelopeBase) {
+    // If it exceeds the largest bucket, pad to the nearest 10KB boundary.
+    targetSize = Math.ceil(envelopeBase / 10240) * 10240;
   }
 
-  return JSON.stringify({ d: text, p: 'x'.repeat(targetSize - size) });
+  const paddingNeeded = Math.max(0, targetSize - envelopeBase);
+  return JSON.stringify({ d: text, p: 'x'.repeat(paddingNeeded) });
 }
 
 interface PaddedEnvelope {

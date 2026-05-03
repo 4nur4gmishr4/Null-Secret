@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
-import securityLottie from '../assets/lotties/privacylock.json';
 import { readSessionTimeoutMinutes } from '../utils/sessionTimeout';
+import privacylockData from '../assets/lotties/privacylock.json';
 
 function formatTimeoutDescription(minutes: number): string {
   if (minutes >= 60) {
@@ -21,7 +21,7 @@ const SecuritySettings: React.FC = () => {
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
       <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
         <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
-          <LottieView animationData={securityLottie} loop={true} />
+          <LottieView animationData={privacylockData} loop={true} />
         </div>
         <div className="space-y-4 text-center md:text-left">
           <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Account Protection</p>
@@ -68,7 +68,7 @@ const SecuritySettings: React.FC = () => {
             <div className="flex items-center justify-between p-4 border" style={{ borderColor: 'var(--border-default)' }}>
               <div>
                 <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>Device sessions</p>
-                <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>1 active device. Tap to review.</p>
+                <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Current session only. Tap to review.</p>
               </div>
               <button onClick={() => navigate('/security/sessions')} className="text-[10px] font-bold uppercase underline" style={{ color: 'var(--text-primary)' }}>View All</button>
             </div>

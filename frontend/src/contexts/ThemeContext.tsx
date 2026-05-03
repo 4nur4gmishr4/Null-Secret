@@ -28,11 +28,7 @@ interface ThemeContextType {
   cycleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
-  preference: 'system',
-  cycleTheme: () => {},
-});
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
 function getSystemTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'light';
@@ -83,4 +79,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = (): ThemeContextType => {
+  const context = useContext(ThemeContext);
+  if (context === null) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

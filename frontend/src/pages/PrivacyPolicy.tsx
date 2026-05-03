@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
-import privacyLock from '../assets/lotties/privacylock.json';
+import privacylockData from '../assets/lotties/privacylock.json';
 
 interface SectionEntry {
   readonly id: string;
@@ -25,7 +25,7 @@ const PrivacyPolicy: React.FC = () => {
       {/* Hero */}
       <header className="text-center space-y-5 md:space-y-6">
         <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 mx-auto lottie-themed">
-          <LottieView animationData={privacyLock} loop={true} />
+          <LottieView animationData={privacylockData} loop={true} />
         </div>
         <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Privacy Manifesto</p>
         <h1 className="text-[36px] leading-[1.05] sm:text-5xl md:text-6xl font-bold tracking-tighter px-2" style={{ color: 'var(--text-primary)' }}>

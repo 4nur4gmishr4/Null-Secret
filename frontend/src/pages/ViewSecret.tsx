@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
 import { deriveKeyFromPassword, importKey, decrypt, unbundle } from '../utils/crypto';
-import shieldAnimation from '../assets/lotties/shield-morph.json';
-import privacyLock from '../assets/lotties/privacylock.json';
-import redSecurity from '../assets/lotties/redsecurity.json';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
+import { API_BASE } from '../utils/api';
+import shieldMorphData from '../assets/lotties/shield-morph.json';
+import redsecurityData from '../assets/lotties/redsecurity.json';
+import privacylockData from '../assets/lotties/privacylock.json';
 
 const ViewSecret: React.FC = () => {
   const { id } = useParams();
@@ -99,7 +98,7 @@ const ViewSecret: React.FC = () => {
     return (
       <div className="max-w-4xl lg:max-w-5xl mx-auto flex flex-col items-center justify-center py-12 md:py-16 space-y-6 slide-up" aria-live="polite">
         <div className="lottie-themed w-56 h-56 md:w-72 md:h-72">
-          <LottieView animationData={shieldAnimation} loop={true} />
+          <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
           Unlocking your message…
@@ -114,7 +113,7 @@ const ViewSecret: React.FC = () => {
       <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" role="alert" aria-live="assertive">
         <div className="flex flex-col items-center text-center py-8 space-y-6">
           <div className="lottie-themed w-44 h-44 md:w-56 md:h-56">
-            <LottieView animationData={redSecurity} loop={true} />
+            <LottieView animationData={redsecurityData} loop={true} />
           </div>
           <div className="space-y-2">
             <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
@@ -191,8 +190,10 @@ const ViewSecret: React.FC = () => {
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <span>
-            {views && views.current < views.limit
-              ? `Open ${views.current} of ${views.limit}. ${views.limit - views.current} more open(s) before this message is gone forever.`
+            {views
+              ? views.current < views.limit
+                ? `Open ${views.current} of ${views.limit}. ${views.limit - views.current} more open(s) before this message is gone forever.`
+                : 'This was the final view — the message has been deleted forever.'
               : 'This message has been deleted forever.'}
           </span>
         </div>
@@ -213,7 +214,7 @@ const ViewSecret: React.FC = () => {
       <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" aria-live="polite">
         <div className="flex flex-col items-center text-center py-6 md:py-8 space-y-4">
           <div className="lottie-themed w-52 h-52 md:w-72 md:h-72">
-            <LottieView animationData={privacyLock} loop={true} />
+            <LottieView animationData={privacylockData} loop={true} />
           </div>
           <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
             Password needed
@@ -230,11 +231,11 @@ const ViewSecret: React.FC = () => {
           style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleDecrypt()}
+          onKeyDown={(e) => e.key === 'Enter' && handleDecrypt(bundledData, password)}
           autoFocus
         />
         <button
-          onClick={() => handleDecrypt()}
+          onClick={() => handleDecrypt(bundledData, password)}
           className="btn btn-primary w-full text-xs tracking-widest uppercase"
         >
           Unlock
@@ -247,7 +248,7 @@ const ViewSecret: React.FC = () => {
   return (
     <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 text-center py-8 md:py-12 slide-up">
       <div className="lottie-themed w-52 h-52 md:w-72 md:h-72 mx-auto mb-4">
-        <LottieView animationData={privacyLock} loop={true} />
+        <LottieView animationData={privacylockData} loop={true} />
       </div>
       <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
         Someone sent you a private message

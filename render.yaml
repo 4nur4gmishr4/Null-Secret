@@ -20,7 +20,17 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/healthz
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
+      - key: DB_PATH
+        value: "/data/nullsecret.db"
+      - key: BACKUP_DIR
+        value: "/data"
+      - key: MASTER_KEY
+        generateValue: true
       # Render injects PORT automatically. We read it in cmd/api/main.go.
       - key: ENV
         value: production
@@ -32,7 +42,7 @@ services:
       # header so per-IP rate limiting actually works.
       - key: TRUST_PROXY
         value: "true"
-      # If your frontend runs at a different scheme/host, set it here so
-      # the Content-Security-Policy connect-src whitelists the right origin.
+      # Used by the Go backend to build the Content-Security-Policy connect-src
+      # directive. Not a Vite variable here — the name is shared for consistency.
       - key: VITE_API_BASE
         value: "https://null-secret-api.onrender.com"

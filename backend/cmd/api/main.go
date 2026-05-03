@@ -8,11 +8,11 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
 	"null-secret/internal/api"
+	"null-secret/internal/config"
 	"null-secret/internal/store"
 )
 
@@ -25,11 +25,7 @@ const (
 // (Render, Heroku, Fly, Railway, Cloud Run) inject at runtime. Falls
 // back to defaultPort for local development. Rejects malformed input
 // loudly so a typo cannot silently bind to ":0".
-func resolveListenAddr() (string, error) {
-	port := strings.TrimSpace(os.Getenv("PORT"))
-	if port == "" {
-		return ":" + defaultPort, nil
-	}
+func resolveListenAddr(port string) (string, error) {
 	n, err := strconv.Atoi(port)
 	if err != nil || n <= 0 || n > 65535 {
 		return "", errors.New("PORT must be an integer in 1..65535")
@@ -41,16 +37,22 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	listenAddr, err := resolveListenAddr()
+	cfg := config.Load()
+
+	listenAddr, err := resolveListenAddr(cfg.Port)
 	if err != nil {
 		slog.Error("invalid PORT", "error", err)
 		os.Exit(1)
 	}
 
-	s := store.NewStorage()
+	s, err := store.NewStorage(cfg.DBPath, cfg.MasterKey, cfg.BackupDir)
+	if err != nil {
+		slog.Error("failed to initialize storage", "error", err)
+		os.Exit(1)
+	}
 	defer s.Close()
 
-	a := api.NewAPI(s)
+	a := api.NewAPI(s, cfg)
 	router := a.SetupRoutes()
 
 	srv := &http.Server{

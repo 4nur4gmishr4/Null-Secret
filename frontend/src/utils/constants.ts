@@ -19,5 +19,8 @@ export const DEFAULT_SESSION_TIMEOUT_MINUTES = 15;
 export const SESSION_TIMEOUT_OPTIONS = ['5', '15', '60', '480'] as const;
 export type SessionTimeoutOption = typeof SESSION_TIMEOUT_OPTIONS[number];
 
-/** Approximate height of the sticky header. Used by viewport-fit auth screens. */
+/**
+ * Approximate height of the sticky header. Used by viewport-fit auth screens.
+ * ⚠ Must stay in sync with `--header-h` in index.css.
+ */
 export const HEADER_HEIGHT_PX = 72;

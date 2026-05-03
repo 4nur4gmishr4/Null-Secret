@@ -3,13 +3,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from '../utils/firebase';
-import logolottie from '../assets/lotties/logolottie.json';
 import InViewLottie from '../components/InViewLottie';
 import Footer from '../components/Footer';
 import { AUTH_ROUTES } from '../utils/constants';
 import { readSessionTimeoutMinutes } from '../utils/sessionTimeout';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1';
+import { API_BASE } from '../utils/api';
+import logolottieData from '../assets/lotties/logolottie.json';
 const MENU_CLOSE_DURATION_MS = 240;
 const INACTIVITY_EVENTS: readonly (keyof WindowEventMap)[] = [
   'mousemove',
@@ -207,6 +206,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
+    let interval: number | null = null;
 
     const checkHealth = async (): Promise<void> => {
       try {
@@ -222,13 +222,35 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       }
     };
 
-    void checkHealth();
-    const interval = window.setInterval(() => { void checkHealth(); }, 60_000);
+    const startPolling = () => {
+      if (interval !== null) return;
+      void checkHealth();
+      interval = window.setInterval(() => { void checkHealth(); }, 60_000);
+    };
+
+    const stopPolling = () => {
+      if (interval !== null) {
+        window.clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
       controller.abort();
-      window.clearInterval(interval);
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -294,7 +316,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {/* Actual Oversized Logo Lottie */}
               <div className="absolute top-1/2 left-0 -translate-y-1/2 w-20 h-20 md:w-24 md:h-24 flex-shrink-0 lottie-themed pointer-events-none">
                 <InViewLottie
-                  animationData={logolottie}
+                  animationData={logolottieData}
                   loop={true}
                   autoplay={true}
                 />
