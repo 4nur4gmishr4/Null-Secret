@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
 import { auth, db } from '../utils/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { friendlyAuthError } from '../utils/authErrors';
 import redsecurityData from '../assets/lotties/redsecurity.json';
 import {
   collection,
@@ -15,14 +16,7 @@ const CONFIRM_PHRASE = 'destroy my vault';
 const FIRESTORE_BATCH_LIMIT = 400; // Firestore hard cap is 500 writes/batch; 400 leaves headroom.
 
 function describeAuthError(err: unknown): string {
-  if (err instanceof Error) {
-    const msg = err.message;
-    if (msg.includes('requires-recent-login')) {
-      return 'For your safety we need a fresh sign-in before deleting your account. Sign out, sign back in, and try again.';
-    }
-    return msg;
-  }
-  return 'Account deletion failed.';
+  return friendlyAuthError(err, 'We could not delete your vault right now. Please try again.');
 }
 
 /**
