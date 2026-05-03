@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LottieView from '../components/LottieView';
+import SecurityPageHeader from '../components/SecurityPageHeader';
 import {
   readSessionTimeoutMinutes,
   writeSessionTimeoutMinutes,
 } from '../utils/sessionTimeout';
 import type { SessionTimeoutOption } from '../utils/constants';
-import privacylockData from '../assets/lotties/privacylock.json';
 
 interface Option {
   readonly value: SessionTimeoutOption;
@@ -43,21 +42,14 @@ const SessionTimeout: React.FC = () => {
 
   return (
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
-      <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
-        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
-          <LottieView animationData={privacylockData} loop={true} />
-        </div>
-        <div className="space-y-4 text-center md:text-left">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Cryptographic Session</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Auto Timeout</h1>
-          <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Pick how long the app should wait before signing you out automatically when you stop using it. The new value applies on your next sign-in or after a page refresh.
-          </p>
-        </div>
-      </div>
+      <SecurityPageHeader
+        eyebrow="Cryptographic Session"
+        title="Auto Timeout"
+        description="Pick how long the app should wait before signing you out automatically when you stop using it. The new value applies on your next sign-in or after a page refresh."
+      />
 
       <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Choose a window</h3>
+        <h3 className="section-title" style={{ color: 'var(--text-primary)' }}>Choose a window</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {OPTIONS.map((opt) => (
             <button

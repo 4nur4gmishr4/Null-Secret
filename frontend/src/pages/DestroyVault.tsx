@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LottieView from '../components/LottieView';
+import SecurityPageHeader from '../components/SecurityPageHeader';
 import { auth, db } from '../utils/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import redsecurityData from '../assets/lotties/redsecurity.json';
@@ -105,18 +105,13 @@ const DestroyVault: React.FC = () => {
 
   return (
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
-      <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
-        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
-          <LottieView animationData={redsecurityData} loop={true} />
-        </div>
-        <div className="space-y-4 text-center md:text-left">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-danger)' }}>Danger Zone</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Destroy Vault</h1>
-          <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
-            This permanently deletes your account, your usage history, and your daily counters. Active secrets you created will continue to live until they expire on their own. There is no recovery.
-          </p>
-        </div>
-      </div>
+      <SecurityPageHeader
+        eyebrow="Danger Zone"
+        eyebrowColor="var(--text-danger)"
+        lottie={redsecurityData}
+        title="Destroy Vault"
+        description="This permanently deletes your account, your usage history, and your daily counters. Active secrets you created will continue to live until they expire on their own. There is no recovery."
+      />
 
       <div className="p-8 border space-y-6" style={{ borderColor: 'var(--text-danger)', background: 'var(--surface-danger)' }}>
         <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-danger)' }}>What gets deleted right now</h3>

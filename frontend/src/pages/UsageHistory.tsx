@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LottieView from '../components/LottieView';
+import SecurityPageHeader from '../components/SecurityPageHeader';
 import { auth, db } from '../utils/firebase';
 import { collection, query, orderBy, getDocs, doc, getDoc, type Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { DAILY_SECRET_LIMIT } from '../utils/constants';
 import { buildCsv, downloadCsv } from '../utils/csv';
-import privacylockData from '../assets/lotties/privacylock.json';
 
 interface HistoryItem {
   id: string;
@@ -85,30 +84,35 @@ const UsageHistory: React.FC = () => {
 
   return (
     <div className="fade-in max-w-5xl mx-auto py-6 md:py-10 px-4 md:px-8 space-y-10 md:space-y-12">
-      <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 border-b pb-8 md:pb-10" style={{ borderColor: 'var(--border-default)' }}>
-        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lottie-themed flex-shrink-0">
-          <LottieView animationData={privacylockData} loop={true} />
-        </div>
-        <div className="space-y-4 text-center md:text-left">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: 'var(--text-tertiary)' }}>Your activity</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>Usage history</h1>
-          <p className="text-sm md:text-base leading-relaxed max-w-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
-            A list of every secret you have created from this account. We only keep the ID and the time you sent it. The actual messages are never logged anywhere.
-          </p>
-        </div>
-        <div className="md:ml-auto w-full md:w-auto flex flex-col items-center md:items-end gap-2">
-          <div className="p-6 border flex flex-col items-center md:items-end justify-center w-full min-w-[200px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-secondary)' }}>
-            <p className="text-[9px] uppercase tracking-[0.3em] font-bold mb-1" style={{ color: 'var(--text-tertiary)' }}>Today's usage</p>
+      <SecurityPageHeader
+        eyebrow="Your activity"
+        title="Usage history"
+        description="A list of every secret you have created from this account. We only keep the ID and the time you sent it. The actual messages are never logged anywhere."
+        aside={
+          <div
+            className="p-6 border flex flex-col items-center md:items-end justify-center w-full min-w-[200px]"
+            style={{ borderColor: 'var(--border-default)', background: 'var(--bg-secondary)' }}
+          >
+            <p className="text-[9px] uppercase tracking-[0.3em] font-bold mb-1" style={{ color: 'var(--text-tertiary)' }}>
+              Today's usage
+            </p>
             <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>{dailyCount}</span>
-              <span className="text-sm font-bold" style={{ color: 'var(--text-tertiary)' }}>/ {DAILY_SECRET_LIMIT}</span>
+              <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-primary)' }}>
+                {dailyCount}
+              </span>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-tertiary)' }}>
+                / {DAILY_SECRET_LIMIT}
+              </span>
             </div>
-            <p className="text-[10px] font-bold mt-2 uppercase tracking-widest" style={{ color: dailyCount >= DAILY_SECRET_LIMIT ? 'var(--text-danger)' : 'var(--text-success)' }}>
+            <p
+              className="text-[10px] font-bold mt-2 uppercase tracking-widest"
+              style={{ color: dailyCount >= DAILY_SECRET_LIMIT ? 'var(--text-danger)' : 'var(--text-success)' }}
+            >
               {dailyCount >= DAILY_SECRET_LIMIT ? 'Daily limit reached' : 'Secrets created today'}
             </p>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="space-y-6">
         <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-default)' }}>
@@ -131,7 +135,7 @@ const UsageHistory: React.FC = () => {
       </div>
 
       <div className="p-8 border bg-[var(--bg-secondary)] space-y-4" style={{ borderColor: 'var(--border-default)' }}>
-        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>What this list does and does not contain</h3>
+        <h3 className="section-title" style={{ color: 'var(--text-primary)' }}>What this list does and does not contain</h3>
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
           You are looking at IDs and timestamps only. The contents of the messages were never sent to us in readable form, so they cannot appear here. We periodically clean up this list, so it does not grow without limit.
         </p>
