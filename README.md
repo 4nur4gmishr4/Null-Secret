@@ -533,7 +533,7 @@ country geolocation, GDPR data export/delete/audit, multi-region
 replication, operator console) are flagged there and not stubbed in
 the UI to avoid implying a security feature is active when it isn't.
 
-### Current Features (v1.0.0)
+### Current Features
 
 The system already does:
 - Browser-side AES-256-GCM encryption

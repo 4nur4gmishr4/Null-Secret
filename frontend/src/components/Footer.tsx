@@ -114,7 +114,7 @@ export default function Footer() {
                 {/* Bottom bar */}
                 <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4" style={{ borderColor: 'var(--border-default)' }}>
                     <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
-                        Version 1.0.0
+                        Built for privacy
                     </p>
                     <div className="flex gap-6">
                         <button onClick={() => navigate('/privacy')} className="text-[11px] hover:opacity-75 transition-opacity" style={{ color: 'var(--text-tertiary)' }}>Privacy Policy</button>
