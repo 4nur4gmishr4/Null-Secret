@@ -159,7 +159,7 @@ const SuperAdmin: React.FC = () => {
             Live Polling Active
           </p>
         </div>
-        <button onClick={handleLogout} className="btn btn-ghost text-xs tracking-wider uppercase">
+        <button onClick={handleLogout} className="btn btn-ghost text-xs tracking-wider uppercase text-red-500">
           Lock
         </button>
       </div>
