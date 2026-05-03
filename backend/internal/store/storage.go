@@ -1,36 +1,71 @@
 package store
 
 import (
+	"container/list"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"database/sql"
 	"encoding/hex"
 	"errors"
-	"hash/fnv"
+	"fmt"
+	"log/slog"
+	"path/filepath"
+	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"null-secret/internal/models"
+
+	_ "modernc.org/sqlite"
+)
+
+var (
+	ErrCapacityExceeded = errors.New("server capacity exceeded, try again later")
+	ErrNotFound         = errors.New("secret not found")
+	ErrExpired          = errors.New("secret expired")
 )
 
 const (
-	maxSecretsPerShard = 100 // SEC-02: 256 shards * 100 = 25,600 secrets total limit
-	rateLimitCapacity  = 10000
-	rateLimitWindow    = time.Minute
-	rateLimitMaxHits   = 10
-	rateLimitScanCap   = 100
+	maxSecrets = 1000
+	maxPayload = 1024 * 1024 // 1MB
 )
 
-var ErrCapacityExceeded = errors.New("server capacity exceeded, try again later")
+const schema = `
+CREATE TABLE IF NOT EXISTS secrets (
+	id TEXT PRIMARY KEY,
+	admin_key TEXT,
+	data BLOB,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	expires_at DATETIME,
+	view_limit INTEGER,
+	views INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_expires_at ON secrets(expires_at);
+CREATE INDEX IF NOT EXISTS idx_created_at ON secrets(created_at);
+`
 
-type Shard struct {
-	mu      sync.RWMutex
-	secrets map[string]*models.Secret
+type limiterEntry struct {
+	ip   string
+	hits []time.Time
 }
 
 type RateLimiter struct {
-	mu   sync.Mutex
-	hits map[string][]time.Time
+	mu    sync.Mutex
+	hits  map[string]*list.Element
+	order *list.List
+	max   int
+}
+
+func NewRateLimiter() *RateLimiter {
+	return &RateLimiter{
+		hits:  make(map[string]*list.Element),
+		order: list.New(),
+		max:   10000,
+	}
 }
 
 func (rl *RateLimiter) Allow(ip string) bool {
@@ -38,60 +73,39 @@ func (rl *RateLimiter) Allow(ip string) bool {
 	defer rl.mu.Unlock()
 
 	now := time.Now()
-	cutoff := now.Add(-rateLimitWindow)
+	cutoff := now.Add(-time.Minute)
 
-	if _, tracked := rl.hits[ip]; !tracked && len(rl.hits) >= rateLimitCapacity {
-		if !rl.evictOneExpiredLocked(cutoff) {
-			return false
+	var entry *limiterEntry
+	if elem, ok := rl.hits[ip]; ok {
+		rl.order.MoveToFront(elem)
+		entry = elem.Value.(*limiterEntry)
+	} else {
+		if rl.order.Len() >= rl.max {
+			oldest := rl.order.Back()
+			if oldest != nil {
+				rl.order.Remove(oldest)
+				delete(rl.hits, oldest.Value.(*limiterEntry).ip)
+			}
 		}
+		entry = &limiterEntry{ip: ip, hits: make([]time.Time, 0)}
+		elem := rl.order.PushFront(entry)
+		rl.hits[ip] = elem
 	}
 
-	kept := rl.hits[ip][:0]
-	for _, t := range rl.hits[ip] {
+	kept := make([]time.Time, 0)
+	for _, t := range entry.hits {
 		if t.After(cutoff) {
 			kept = append(kept, t)
 		}
 	}
 
-	if len(kept) >= rateLimitMaxHits {
-		rl.hits[ip] = kept
+	if len(kept) >= 20 { // 20 requests / minute
+		entry.hits = kept
 		return false
 	}
-	rl.hits[ip] = append(kept, now)
+
+	entry.hits = append(kept, now)
 	return true
-}
-
-func (rl *RateLimiter) evictOneExpiredLocked(cutoff time.Time) bool {
-	scanned := 0
-	for trackedIP, hits := range rl.hits {
-		if scanned >= rateLimitScanCap {
-			return false
-		}
-		if len(hits) == 0 || hits[len(hits)-1].Before(cutoff) {
-			delete(rl.hits, trackedIP)
-			return true
-		}
-		scanned++
-	}
-	return false
-}
-
-func (rl *RateLimiter) evictExpired(cutoff time.Time) {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-	for ip, hits := range rl.hits {
-		kept := hits[:0]
-		for _, t := range hits {
-			if t.After(cutoff) {
-				kept = append(kept, t)
-			}
-		}
-		if len(kept) == 0 {
-			delete(rl.hits, ip)
-		} else {
-			rl.hits[ip] = kept
-		}
-	}
 }
 
 func (rl *RateLimiter) cleanup(ctx context.Context) {
@@ -102,48 +116,174 @@ func (rl *RateLimiter) cleanup(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			rl.evictExpired(time.Now().Add(-rateLimitWindow))
+			rl.mu.Lock()
+			cutoff := time.Now().Add(-time.Minute)
+			var next *list.Element
+			for e := rl.order.Front(); e != nil; e = next {
+				next = e.Next()
+				entry := e.Value.(*limiterEntry)
+				kept := make([]time.Time, 0)
+				for _, t := range entry.hits {
+					if t.After(cutoff) {
+						kept = append(kept, t)
+					}
+				}
+				if len(kept) == 0 {
+					rl.order.Remove(e)
+					delete(rl.hits, entry.ip)
+				} else {
+					entry.hits = kept
+				}
+			}
+			rl.mu.Unlock()
 		}
 	}
 }
 
 type Storage struct {
-	shards     [256]*Shard
-	Limiter    *RateLimiter
-	totalBytes atomic.Int64
-	cancel     context.CancelFunc
+	db        *sql.DB
+	Limiter   *RateLimiter
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
+	masterKey []byte
+	backupDir string
 }
 
-const maxGlobalBytes int64 = 250 * 1024 * 1024 // 250 MB
+func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, error) {
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, err
+	}
 
-func NewStorage() *Storage {
+	if _, err := db.Exec(schema); err != nil {
+		return nil, err
+	}
+
+	// Optimize SQLite for concurrent reads/writes
+	db.Exec("PRAGMA journal_mode=WAL;")
+	db.Exec("PRAGMA synchronous=NORMAL;")
+	db.Exec("PRAGMA busy_timeout=5000;")
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(4)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Storage{
-		Limiter: &RateLimiter{hits: make(map[string][]time.Time)},
-		cancel:  cancel,
+		db:        db,
+		Limiter:   NewRateLimiter(),
+		cancel:    cancel,
+		masterKey: masterKey,
+		backupDir: backupDir,
 	}
-	for i := 0; i < 256; i++ {
-		s.shards[i] = &Shard{
-			secrets: make(map[string]*models.Secret),
-		}
-	}
-	go s.startGC(ctx)
-	go s.Limiter.cleanup(ctx)
-	return s
+
+	s.wg.Add(3)
+	go func() {
+		defer s.wg.Done()
+		s.Limiter.cleanup(ctx)
+	}()
+	go func() {
+		defer s.wg.Done()
+		s.startTTLWorker(ctx)
+	}()
+	go func() {
+		defer s.wg.Done()
+		s.startBackupWorker(ctx)
+	}()
+
+	return s, nil
 }
 
-// Close stops the background GC and rate-limiter cleanup goroutines.
-// Safe to call multiple times via context cancellation idempotency.
 func (s *Storage) Close() {
 	if s.cancel != nil {
 		s.cancel()
 	}
+	s.wg.Wait()
+	if s.db != nil {
+		s.db.Close()
+	}
 }
 
-func (s *Storage) getShard(id string) *Shard {
-	h := fnv.New32a()
-	_, _ = h.Write([]byte(id))
-	return s.shards[h.Sum32()%256]
+func (s *Storage) DB() *sql.DB {
+	return s.db
+}
+
+type StorageStats struct {
+	ActiveSecrets     int   `json:"activeSecrets"`
+	TotalPayloadBytes int64 `json:"totalPayloadBytes"`
+}
+
+func (s *Storage) Stats() StorageStats {
+	var active int
+	var bytes sql.NullInt64
+	_ = s.db.QueryRow("SELECT COUNT(*), SUM(LENGTH(data)) FROM secrets").Scan(&active, &bytes)
+	
+	totalBytes := int64(0)
+	if bytes.Valid {
+		totalBytes = bytes.Int64
+	}
+
+	return StorageStats{
+		ActiveSecrets:     active,
+		TotalPayloadBytes: totalBytes,
+	}
+}
+
+func hashAdminKey(key string) string {
+	h := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])
+}
+
+func encryptPayload(payload, masterKey []byte) ([]byte, error) {
+	block, err := aes.NewCipher(masterKey)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, err
+	}
+	cipherText := gcm.Seal(nonce, nonce, payload, nil)
+	res := append([]byte("v1:"), cipherText...)
+	return res, nil
+}
+
+func decryptPayload(data, masterKey []byte) ([]byte, error) {
+	if len(data) < 3 || string(data[:3]) != "v1:" {
+		return data, nil // backward compatibility
+	}
+	cipherText := data[3:]
+	block, err := aes.NewCipher(masterKey)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	if len(cipherText) < gcm.NonceSize() {
+		return nil, errors.New("malformed ciphertext")
+	}
+	nonce, cipherText := cipherText[:gcm.NonceSize()], cipherText[gcm.NonceSize():]
+	return gcm.Open(nil, nonce, cipherText, nil)
+}
+
+func execWithRetry(execFunc func() error) error {
+	var err error
+	for i := 0; i < 5; i++ {
+		err = execFunc()
+		if err == nil {
+			return nil
+		}
+		if strings.Contains(err.Error(), "database is locked") {
+			time.Sleep(time.Duration(10*(1<<i)) * time.Millisecond)
+			continue
+		}
+		return err
+	}
+	return err
 }
 
 func generateID() (string, error) {
@@ -155,157 +295,250 @@ func generateID() (string, error) {
 }
 
 func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string, string, error) {
-	payloadLen := int64(len(payload))
-
-	// Enforce strict 10MB payload size limit at storage layer
-	if payloadLen > 10*1024*1024 {
-		return "", "", errors.New("payload exceeds maximum allowed size (10MB)")
+	if len(payload) > maxPayload {
+		return "", "", errors.New("payload exceeds maximum allowed size (1MB)")
 	}
 
-	// CAS loop avoids spurious ErrCapacityExceeded on concurrent callers
-	// that would otherwise observe an inflated intermediate total during
-	// the optimistic Add-then-revert window.
-	for {
-		current := s.totalBytes.Load()
-		next := current + payloadLen
-		if next > maxGlobalBytes {
-			return "", "", ErrCapacityExceeded
-		}
-		if s.totalBytes.CompareAndSwap(current, next) {
-			break
-		}
+	encPayload, err := encryptPayload(payload, s.masterKey)
+	if err != nil {
+		return "", "", err
 	}
 
 	id, err := generateID()
 	if err != nil {
-		s.totalBytes.Add(-payloadLen)
 		return "", "", err
 	}
 	adminKey, err := generateID()
 	if err != nil {
-		s.totalBytes.Add(-payloadLen)
 		return "", "", err
 	}
-	secret := &models.Secret{
-		ID:        id,
-		AdminKey:  adminKey,
-		Payload:   payload,
-		ExpiresAt: time.Now().Add(time.Duration(expiryHours) * time.Hour),
-		ViewLimit: viewLimit,
-		Views:     0,
-	}
+	hashedAdminKey := hashAdminKey(adminKey)
 
-	shard := s.getShard(id)
-	shard.mu.Lock()
-	if len(shard.secrets) >= maxSecretsPerShard {
-		s.gcShardLocked(shard)
-		if len(shard.secrets) >= maxSecretsPerShard {
-			shard.mu.Unlock()
-			s.totalBytes.Add(-payloadLen)
-			return "", "", ErrCapacityExceeded
+	expiresAt := time.Now().UTC().Add(time.Duration(expiryHours) * time.Hour)
+
+	err = execWithRetry(func() error {
+		tx, err := s.db.Begin()
+		if err != nil {
+			return err
 		}
+		defer tx.Rollback()
+
+		var count int
+		if err := tx.QueryRow("SELECT COUNT(*) FROM secrets").Scan(&count); err != nil {
+			return err
+		}
+		if count >= maxSecrets {
+			_, err = tx.Exec("DELETE FROM secrets WHERE id IN (SELECT id FROM secrets ORDER BY created_at ASC LIMIT 10)")
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = tx.Exec(`
+			INSERT INTO secrets (id, admin_key, data, expires_at, view_limit, views)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, id, hashedAdminKey, encPayload, expiresAt, viewLimit, 0)
+
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
+	})
+
+	if err != nil {
+		return "", "", err
 	}
-	shard.secrets[id] = secret
-	shard.mu.Unlock()
 
 	return id, adminKey, nil
 }
 
 func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoResponse, bool) {
-	shard := s.getShard(id)
-	shard.mu.RLock()
-	defer shard.mu.RUnlock()
+	var storedAdminKey string
+	var views, viewLimit int
+	var expiresAt time.Time
 
-	secret, ok := shard.secrets[id]
-	if !ok || secret.AdminKey != adminKey {
+	err := s.db.QueryRow(`
+		SELECT admin_key, views, view_limit, expires_at 
+		FROM secrets WHERE id = ?
+	`, id).Scan(&storedAdminKey, &views, &viewLimit, &expiresAt)
+
+	if err != nil {
+		return nil, false
+	}
+
+	if time.Now().UTC().After(expiresAt) {
+		return nil, false
+	}
+
+	hashedAdminKey := hashAdminKey(adminKey)
+	bStored := []byte(storedAdminKey)
+	bHashed := []byte(hashedAdminKey)
+	bAdmin := []byte(adminKey)
+
+	valid := false
+	if len(bStored) == len(bHashed) && subtle.ConstantTimeCompare(bStored, bHashed) == 1 {
+		valid = true
+	} else if len(bStored) == len(bAdmin) && subtle.ConstantTimeCompare(bStored, bAdmin) == 1 {
+		valid = true
+	}
+
+	if !valid {
 		return nil, false
 	}
 
 	return &models.SecretInfoResponse{
-		Views:     secret.Views,
-		ViewLimit: secret.ViewLimit,
-		ExpiresAt: secret.ExpiresAt,
+		Views:     views,
+		ViewLimit: viewLimit,
+		ExpiresAt: expiresAt,
 	}, true
 }
 
 func (s *Storage) Burn(id string, adminKey string) bool {
-	shard := s.getShard(id)
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
+	var storedAdminKey string
+	err := s.db.QueryRow("SELECT admin_key FROM secrets WHERE id = ?", id).Scan(&storedAdminKey)
+	if err != nil {
+		return false
+	}
+	
+	hashedAdminKey := hashAdminKey(adminKey)
+	bStored := []byte(storedAdminKey)
+	bHashed := []byte(hashedAdminKey)
+	bAdmin := []byte(adminKey)
 
-	secret, ok := shard.secrets[id]
-	if !ok || secret.AdminKey != adminKey {
+	valid := false
+	if len(bStored) == len(bHashed) && subtle.ConstantTimeCompare(bStored, bHashed) == 1 {
+		valid = true
+	} else if len(bStored) == len(bAdmin) && subtle.ConstantTimeCompare(bStored, bAdmin) == 1 {
+		valid = true
+	}
+
+	if !valid {
 		return false
 	}
 
-	s.totalBytes.Add(-int64(len(secret.Payload)))
-	delete(shard.secrets, id)
-	return true
+	res, err := s.db.Exec("DELETE FROM secrets WHERE id = ?", id)
+	if err != nil {
+		return false
+	}
+	affected, _ := res.RowsAffected()
+	return affected > 0
 }
 
-func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, bool) {
-	shard := s.getShard(id)
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
+func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
+	var payload []byte
+	var expiresAt time.Time
+	var viewLimit, views int
 
-	secret, ok := shard.secrets[id]
-	if !ok {
-		return nil, false
-	}
-
-	if time.Now().After(secret.ExpiresAt) {
-		s.totalBytes.Add(-int64(len(secret.Payload)))
-		delete(shard.secrets, id)
-		return nil, false
-	}
-
-	secret.Views++
-
-	secretCopy := &models.Secret{
-		ID:        secret.ID,
-		Payload:   secret.Payload,
-		ExpiresAt: secret.ExpiresAt,
-		ViewLimit: secret.ViewLimit,
-		Views:     secret.Views,
-	}
-
-	if secret.Views >= secret.ViewLimit {
-		s.totalBytes.Add(-int64(len(secret.Payload)))
-		delete(shard.secrets, id)
-	}
-
-	return secretCopy, true
-}
-
-// gcShardLocked sweeps expired entries from a shard whose mutex is
-// already held by the caller. Used by Store to avoid lock-unlock-lock
-// TOCTOU where another writer could refill the shard between locks.
-func (s *Storage) gcShardLocked(shard *Shard) {
-	now := time.Now()
-	for id, secret := range shard.secrets {
-		if now.After(secret.ExpiresAt) {
-			s.totalBytes.Add(-int64(len(secret.Payload)))
-			delete(shard.secrets, id)
+	err := execWithRetry(func() error {
+		tx, err := s.db.Begin()
+		if err != nil {
+			return err
 		}
+		defer tx.Rollback()
+
+		err = tx.QueryRow(`
+			SELECT data, expires_at, view_limit, views 
+			FROM secrets WHERE id = ?
+		`, id).Scan(&payload, &expiresAt, &viewLimit, &views)
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrNotFound
+			}
+			return err
+		}
+
+		if time.Now().UTC().After(expiresAt) {
+			tx.Exec("DELETE FROM secrets WHERE id = ?", id)
+			tx.Commit()
+			return ErrExpired
+		}
+
+		views++
+
+		if views >= viewLimit {
+			_, err = tx.Exec("DELETE FROM secrets WHERE id = ?", id)
+		} else {
+			_, err = tx.Exec("UPDATE secrets SET views = ? WHERE id = ?", views, id)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit()
+	})
+
+	if err != nil {
+		return nil, err
 	}
+
+	decPayload, err := decryptPayload(payload, s.masterKey)
+	if err != nil {
+		return nil, err
+	}
+
+	secret := &models.Secret{
+		ID:        id,
+		Payload:   decPayload,
+		ExpiresAt: expiresAt,
+		ViewLimit: viewLimit,
+		Views:     views,
+	}
+
+	return secret, nil
 }
 
-func (s *Storage) gcShard(shard *Shard) {
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
-	s.gcShardLocked(shard)
+func (s *Storage) PurgeAll() int {
+	res, err := s.db.Exec("DELETE FROM secrets")
+	if err != nil {
+		return 0
+	}
+	affected, _ := res.RowsAffected()
+	return int(affected)
 }
 
-func (s *Storage) startGC(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Minute)
+func (s *Storage) startTTLWorker(ctx context.Context) {
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			for i := 0; i < 256; i++ {
-				s.gcShard(s.shards[i])
+			err := execWithRetry(func() error {
+				res, err := s.db.Exec("DELETE FROM secrets WHERE expires_at < CURRENT_TIMESTAMP")
+				if err == nil {
+					if affected, _ := res.RowsAffected(); affected > 0 {
+						slog.Info("TTL Worker purged expired secrets", "count", affected)
+					}
+				}
+				return err
+			})
+			if err != nil {
+				slog.Warn("TTL Worker failed", "error", err)
+			}
+		}
+	}
+}
+
+func (s *Storage) startBackupWorker(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			backupFile := filepath.Join(s.backupDir, "backup.db")
+			err := execWithRetry(func() error {
+				_, err := s.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupFile))
+				return err
+			})
+			if err != nil {
+				slog.Error("Backup worker failed", "error", err)
+			} else {
+				slog.Info("Database successfully backed up", "file", backupFile)
 			}
 		}
 	}

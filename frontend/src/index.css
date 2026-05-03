@@ -107,7 +107,8 @@ body {
 /* ── Focus States ── */
 *:focus-visible {
   outline: 2px solid var(--accent) !important;
-  outline-offset: 2px !important;
+  outline-offset: 3px !important;
+  transition: outline-offset 0.1s ease;
 }
 
 /* ── Form Elements ── */
@@ -175,10 +176,15 @@ button {
   font-weight: 600;
   letter-spacing: 0.04em;
   padding: 14px 24px;
-  transition: all 0.15s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 0.06s;
 }
 
 .btn-primary {
@@ -346,6 +352,18 @@ button {
   animation: marquee 12s linear infinite;
 }
 
+@keyframes marqueeSeamless {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee-seamless {
+  display: flex;
+  white-space: nowrap;
+  animation: marqueeSeamless 30s linear infinite;
+  will-change: transform;
+}
+
 /* ── Lottie Themed Wrapper ── */
 .lottie-themed {
   opacity: 0.85;
@@ -383,13 +401,6 @@ button.icon-soft:hover:not(:disabled) {
 /* Disabled buttons must look disabled, not just translucent. */
 button:disabled {
   cursor: not-allowed;
-}
-
-.strength-bar-fill {
-  background: var(--text-primary);
-  height: 4px !important;
-  border-top: 1px solid var(--bg-primary);
-  border-bottom: 1px solid var(--bg-primary);
 }
 
 /* ── Scrollbar ── */
@@ -595,6 +606,49 @@ button:disabled {
 @keyframes fadeInQuick {
   0% { opacity: 0; }
   100% { opacity: 1; }
+}
+
+/* ── Toast Notifications ── */
+.toast-enter {
+  animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.3s cubic-bezier(0.7, 0, 0.84, 0) both;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+}
+
+/* ── Skeleton Loader ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-elevated) 50%, var(--bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Reduced-motion respect ──

@@ -1,14 +1,17 @@
 import React, { Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Layout from './layouts/Layout';
 import Preloader from './components/Preloader';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
 const Success = React.lazy(() => import('./pages/Success'));
 const ViewSecret = React.lazy(() => import('./pages/ViewSecret'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
 const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
 const Authscreen = React.lazy(() => import('./components/Authscreen'));
 const Signup = React.lazy(() => import('./components/Signup'));
@@ -21,6 +24,8 @@ const SessionTimeout = React.lazy(() => import('./pages/SessionTimeout'));
 const DeviceSessions = React.lazy(() => import('./pages/DeviceSessions'));
 const DestroyVault = React.lazy(() => import('./pages/DestroyVault'));
 const AccountSettings = React.lazy(() => import('./pages/AccountSettings'));
+
+import { useToast } from './contexts/ToastContext';
 
 const NotFound: React.FC = () => (
   <div className="text-center py-24 space-y-4 slide-up">
@@ -38,6 +43,29 @@ const NotFound: React.FC = () => (
   </div>
 );
 
+const OfflineDetector: React.FC = () => {
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    const handleOffline = () => {
+      toast('You are currently offline. Please reconnect to send or view secrets.', 'error');
+    };
+    const handleOnline = () => {
+      toast('Back online!', 'success');
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [toast]);
+
+  return null;
+};
+
 const App: React.FC = () => {
   const [preloaderDone, setPreloaderDone] = useState(false);
 
@@ -47,9 +75,12 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      {!preloaderDone && <Preloader onComplete={handlePreloaderComplete} />}
-      <Router>
+      <ToastProvider>
+        <OfflineDetector />
+        {!preloaderDone && <Preloader onComplete={handlePreloaderComplete} />}
+        <Router>
         <Layout>
+          <ErrorBoundary>
           <Suspense fallback={
             <div className="py-24 flex flex-col items-center justify-center space-y-4">
               <svg className="animate-spin h-6 w-6" style={{ color: 'var(--text-primary)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -67,6 +98,7 @@ const App: React.FC = () => {
               <Route path="/s/:id" element={<Success />} />
               <Route path="/v/:id" element={<ViewSecret />} />
               <Route path="/admin/:id" element={<AdminDashboard />} />
+              <Route path="/super-admin" element={<SuperAdmin />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/login" element={<Authscreen />} />
               <Route path="/signup" element={<Signup />} />
@@ -82,8 +114,10 @@ const App: React.FC = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </Layout>
       </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 };

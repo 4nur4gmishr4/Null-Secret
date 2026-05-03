@@ -6,6 +6,7 @@ type Secret struct {
 	ID        string    `json:"id"`
 	AdminKey  string    `json:"-"`
 	Payload   []byte    `json:"payload"`
+	CreatedAt time.Time `json:"createdAt"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	ViewLimit int       `json:"viewLimit"`
 	Views     int       `json:"views"`
@@ -34,6 +35,11 @@ type SecretInfoResponse struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
+type APIError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error APIError `json:"error"`
 }

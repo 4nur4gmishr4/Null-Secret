@@ -2,21 +2,23 @@ import React, { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../contexts/ToastContext';
 
 const Success: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { toast } = useToast();
   
   const keyStr = location.hash.replace('#', '');
   const adminKey = location.state?.adminKey;
   
   React.useEffect(() => {
     if (adminKey && id) {
-      const keys = JSON.parse(localStorage.getItem('nullSecret_adminKeys') || '{}');
+      const keys = JSON.parse(sessionStorage.getItem('nullSecret_adminKeys') || '{}');
       keys[id] = adminKey;
-      localStorage.setItem('nullSecret_adminKeys', JSON.stringify(keys));
+      sessionStorage.setItem('nullSecret_adminKeys', JSON.stringify(keys));
     }
   }, [adminKey, id]);
   
@@ -29,14 +31,17 @@ const Success: React.FC = () => {
 
   const copyToClipboard = async (
     text: string,
-    setter: React.Dispatch<React.SetStateAction<boolean>>
+    setter: React.Dispatch<React.SetStateAction<boolean>>,
+    label: string,
   ): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
       setter(true);
+      toast(`${label} copied to clipboard`, 'success');
       setTimeout(() => setter(false), 2500);
     } catch (err) {
       console.error('clipboard write failed', err);
+      toast('Could not copy to clipboard', 'error');
     }
   };
 
@@ -67,7 +72,7 @@ const Success: React.FC = () => {
         </div>
         <div className="grid grid-cols-2 gap-3 pt-2">
           <button
-            onClick={() => copyToClipboard(fullUrl, setCopied)}
+            onClick={() => copyToClipboard(fullUrl, setCopied, 'Secret link')}
             className={`btn w-full text-xs tracking-wider uppercase ${copied ? 'btn-secondary' : 'btn-primary'}`}
           >
             {copied ? 'Copied' : 'Copy link'}
@@ -93,7 +98,7 @@ const Success: React.FC = () => {
           </div>
           <div className="pt-2">
             <button
-              onClick={() => copyToClipboard(adminUrl, setCopiedAdmin)}
+              onClick={() => copyToClipboard(adminUrl, setCopiedAdmin, 'Admin link')}
               className={`btn w-full text-xs tracking-wider uppercase ${copiedAdmin ? 'btn-secondary' : 'btn-ghost'}`}
               style={{ border: '1px solid var(--border-default)' }}
             >
