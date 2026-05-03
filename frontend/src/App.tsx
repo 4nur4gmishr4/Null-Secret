@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Layout from './layouts/Layout';
@@ -8,6 +8,16 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { auth } from './utils/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Analytics } from '@vercel/analytics/react';
+
+const ScrollToTop: React.FC = () => {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return null;
+};
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
@@ -113,6 +123,7 @@ const App: React.FC = () => {
         <OfflineDetector />
         {!preloaderDone && <Preloader onComplete={handlePreloaderComplete} />}
         <Router>
+          <ScrollToTop />
         <Layout>
           <ErrorBoundary>
           <Suspense fallback={
