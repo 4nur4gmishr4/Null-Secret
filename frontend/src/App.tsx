@@ -1,10 +1,12 @@
 import React, { Suspense, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Layout from './layouts/Layout';
 import Preloader from './components/Preloader';
 import ErrorBoundary from './components/ErrorBoundary';
+import { auth } from './utils/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Home = React.lazy(() => import('./pages/Home'));
@@ -26,6 +28,36 @@ const DestroyVault = React.lazy(() => import('./pages/DestroyVault'));
 const AccountSettings = React.lazy(() => import('./pages/AccountSettings'));
 
 import { useToast } from './contexts/ToastContext';
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center space-y-4">
+        <svg className="animate-spin h-6 w-6" style={{ color: 'var(--text-primary)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const NotFound: React.FC = () => (
   <div className="text-center py-24 space-y-4 slide-up">
@@ -94,7 +126,7 @@ const App: React.FC = () => {
           }>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/app" element={<Home />} />
+              <Route path="/app" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/s/:id" element={<Success />} />
               <Route path="/v/:id" element={<ViewSecret />} />
               <Route path="/admin/:id" element={<AdminDashboard />} />
@@ -103,14 +135,14 @@ const App: React.FC = () => {
               <Route path="/login" element={<Authscreen />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/history" element={<UsageHistory />} />
-              <Route path="/security" element={<SecuritySettings />} />
-              <Route path="/security/2fa" element={<TwoFactorSetup />} />
-              <Route path="/security/biometric" element={<BiometricSetup />} />
-              <Route path="/security/timeout" element={<SessionTimeout />} />
-              <Route path="/security/sessions" element={<DeviceSessions />} />
-              <Route path="/security/destroy" element={<DestroyVault />} />
-              <Route path="/account" element={<AccountSettings />} />
+              <Route path="/history" element={<ProtectedRoute><UsageHistory /></ProtectedRoute>} />
+              <Route path="/security" element={<ProtectedRoute><SecuritySettings /></ProtectedRoute>} />
+              <Route path="/security/2fa" element={<ProtectedRoute><TwoFactorSetup /></ProtectedRoute>} />
+              <Route path="/security/biometric" element={<ProtectedRoute><BiometricSetup /></ProtectedRoute>} />
+              <Route path="/security/timeout" element={<ProtectedRoute><SessionTimeout /></ProtectedRoute>} />
+              <Route path="/security/sessions" element={<ProtectedRoute><DeviceSessions /></ProtectedRoute>} />
+              <Route path="/security/destroy" element={<ProtectedRoute><DestroyVault /></ProtectedRoute>} />
+              <Route path="/account" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

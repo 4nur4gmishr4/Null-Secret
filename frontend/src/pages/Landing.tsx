@@ -32,24 +32,22 @@ const Landing: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
             <button
-              onClick={() => navigate('/app')}
+              onClick={() => navigate('/login')}
               className="btn btn-primary lift w-full sm:w-auto text-xs tracking-widest uppercase"
               style={{ minWidth: '220px', padding: '16px 32px' }}
             >
-              Create Secret
+              Sign In to Start
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>
-            <a
-              href="https://github.com/4nur4gmishr4/Null-Secret"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => navigate('/signup')}
               className="btn btn-secondary w-full sm:w-auto text-xs tracking-widest uppercase"
-              style={{ minWidth: '180px', padding: '16px 32px', textDecoration: 'none' }}
+              style={{ minWidth: '180px', padding: '16px 32px' }}
             >
-              View Source
-            </a>
+              Create Account
+            </button>
           </div>
         </div>
       </section>
@@ -125,14 +123,14 @@ const Landing: React.FC = () => {
       {/* ── CTA ── */}
       <section className="py-12 md:py-16 text-center" style={{ borderTop: `1px solid var(--border-default)` }}>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Ready to send something private?
+          Sign in to start sending private messages
         </p>
         <button
-          onClick={() => navigate('/app')}
+          onClick={() => navigate('/login')}
           className="btn btn-primary lift text-xs tracking-widest uppercase mx-auto"
           style={{ minWidth: '240px', padding: '16px 32px' }}
         >
-          Create Secret
+          Sign In Now
         </button>
       </section>
     </div>
