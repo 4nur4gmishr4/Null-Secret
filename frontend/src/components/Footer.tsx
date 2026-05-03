@@ -31,7 +31,7 @@ export default function Footer() {
                         {/* Subtext */}
                         <div className="mt-6">
                             <p className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-                                Developed by Anurag Mishra
+                                Designed, developed, and managed by Anurag Mishra
                             </p>
                             <p className="text-[11px] mt-2" style={{ color: 'var(--text-tertiary)' }}>
                                 © 2026 Null-Secret. All rights reserved.
