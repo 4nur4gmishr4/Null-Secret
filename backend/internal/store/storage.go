@@ -215,7 +215,7 @@ func (s *Storage) Stats() StorageStats {
 	var active int
 	var bytes sql.NullInt64
 	_ = s.db.QueryRow("SELECT COUNT(*), SUM(LENGTH(data)) FROM secrets").Scan(&active, &bytes)
-	
+
 	totalBytes := int64(0)
 	if bytes.Valid {
 		totalBytes = bytes.Int64
@@ -252,7 +252,7 @@ func encryptPayload(payload, masterKey []byte) ([]byte, error) {
 
 func decryptPayload(data, masterKey []byte) ([]byte, error) {
 	if len(data) < 3 || string(data[:3]) != "v1:" {
-		return data, nil // backward compatibility
+		return nil, errors.New("payload missing encryption version prefix")
 	}
 	cipherText := data[3:]
 	block, err := aes.NewCipher(masterKey)
@@ -370,19 +370,7 @@ func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoRespons
 		return nil, false
 	}
 
-	hashedAdminKey := hashAdminKey(adminKey)
-	bStored := []byte(storedAdminKey)
-	bHashed := []byte(hashedAdminKey)
-	bAdmin := []byte(adminKey)
-
-	valid := false
-	if len(bStored) == len(bHashed) && subtle.ConstantTimeCompare(bStored, bHashed) == 1 {
-		valid = true
-	} else if len(bStored) == len(bAdmin) && subtle.ConstantTimeCompare(bStored, bAdmin) == 1 {
-		valid = true
-	}
-
-	if !valid {
+	if !validateAdminKey(storedAdminKey, adminKey) {
 		return nil, false
 	}
 
@@ -393,26 +381,26 @@ func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoRespons
 	}, true
 }
 
+// validateAdminKey compares the stored hashed admin key with the provided plaintext
+// admin key using constant-time comparison to prevent timing attacks.
+func validateAdminKey(storedHash, providedKey string) bool {
+	hashedProvided := hashAdminKey(providedKey)
+	bStored := []byte(storedHash)
+	bHashed := []byte(hashedProvided)
+	if len(bStored) != len(bHashed) {
+		return false
+	}
+	return subtle.ConstantTimeCompare(bStored, bHashed) == 1
+}
+
 func (s *Storage) Burn(id string, adminKey string) bool {
 	var storedAdminKey string
 	err := s.db.QueryRow("SELECT admin_key FROM secrets WHERE id = ?", id).Scan(&storedAdminKey)
 	if err != nil {
 		return false
 	}
-	
-	hashedAdminKey := hashAdminKey(adminKey)
-	bStored := []byte(storedAdminKey)
-	bHashed := []byte(hashedAdminKey)
-	bAdmin := []byte(adminKey)
 
-	valid := false
-	if len(bStored) == len(bHashed) && subtle.ConstantTimeCompare(bStored, bHashed) == 1 {
-		valid = true
-	} else if len(bStored) == len(bAdmin) && subtle.ConstantTimeCompare(bStored, bAdmin) == 1 {
-		valid = true
-	}
-
-	if !valid {
+	if !validateAdminKey(storedAdminKey, adminKey) {
 		return false
 	}
 
@@ -531,8 +519,9 @@ func (s *Storage) startBackupWorker(ctx context.Context) {
 			return
 		case <-ticker.C:
 			backupFile := filepath.Join(s.backupDir, "backup.db")
+			sanitizedPath := strings.ReplaceAll(backupFile, "'", "''")
 			err := execWithRetry(func() error {
-				_, err := s.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupFile))
+				_, err := s.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", sanitizedPath))
 				return err
 			})
 			if err != nil {

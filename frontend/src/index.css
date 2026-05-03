@@ -166,6 +166,28 @@ button {
   color: var(--text-tertiary);
 }
 
+/* Repeated typography primitives. Prefer these over ad-hoc utility stacks. */
+.eyebrow-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.caps-button {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 /* ── Button System ── */
 .btn {
   display: inline-flex;
