@@ -342,8 +342,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             )}
             {!isApp && (
               <button
-                onClick={() => navigate('/app')}
-                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex"        
+                onClick={() => user ? navigate('/app') : navigate('/login')}
+                className="btn-ghost text-xs font-semibold tracking-wide hidden sm:flex"
                 style={{ padding: '6px 12px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase' }}
               >
                 Create Secret
@@ -508,14 +508,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <ul className="space-y-0">
                 {[
                   { label: 'Home', path: '/' },
-                  { label: 'Create Secret', path: '/app' },
+                  { label: 'Create Secret', path: '/app', protected: true },
                   { label: 'Privacy', path: '/privacy' },
                 ].map((item) => {
                   const active = location.pathname === item.path;
                   return (
                     <li key={item.path}>
                       <button
-                        onClick={() => { closeMobileMenu(); navigate(item.path); }}
+                        onClick={() => {
+                          closeMobileMenu();
+                          if (item.protected && !user) {
+                            navigate('/login');
+                          } else {
+                            navigate(item.path);
+                          }
+                        }}
                         className="group w-full flex items-center justify-between py-5 text-left border-b transition-colors"
                         style={{ borderColor: 'var(--border-default)', color: active ? 'var(--text-primary)' : 'var(--text-primary)' }}
                         aria-current={active ? 'page' : undefined}
