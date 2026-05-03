@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../utils/firebase';
 import InViewLottie from '../components/InViewLottie';
 import privacyfullData from '../assets/lotties/privacyfull.json';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="fade-in">
@@ -31,23 +41,47 @@ const Landing: React.FC = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-            <button
-              onClick={() => navigate('/login')}
-              className="btn btn-primary lift w-full sm:w-auto text-xs tracking-widest uppercase"
-              style={{ minWidth: '220px', padding: '16px 32px' }}
-            >
-              Sign In to Start
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
-            <button
-              onClick={() => navigate('/signup')}
-              className="btn btn-secondary w-full sm:w-auto text-xs tracking-widest uppercase"
-              style={{ minWidth: '180px', padding: '16px 32px' }}
-            >
-              Create Account
-            </button>
+            {user ? (
+              <>
+                <button
+                  onClick={() => navigate('/app')}
+                  className="btn btn-primary lift w-full sm:w-auto text-xs tracking-widest uppercase"
+                  style={{ minWidth: '220px', padding: '16px 32px' }}
+                >
+                  Create Secret
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => navigate('/account')}
+                  className="btn btn-secondary w-full sm:w-auto text-xs tracking-widest uppercase"
+                  style={{ minWidth: '180px', padding: '16px 32px' }}
+                >
+                  My Account
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="btn btn-primary lift w-full sm:w-auto text-xs tracking-widest uppercase"
+                  style={{ minWidth: '220px', padding: '16px 32px' }}
+                >
+                  Sign In to Start
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="btn btn-secondary w-full sm:w-auto text-xs tracking-widest uppercase"
+                  style={{ minWidth: '180px', padding: '16px 32px' }}
+                >
+                  Create Account
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -123,14 +157,14 @@ const Landing: React.FC = () => {
       {/* ── CTA ── */}
       <section className="py-12 md:py-16 text-center" style={{ borderTop: `1px solid var(--border-default)` }}>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Sign in to start sending private messages
+          {user ? 'Ready to send another secret?' : 'Sign in to start sending private messages'}
         </p>
         <button
-          onClick={() => navigate('/login')}
+          onClick={() => user ? navigate('/app') : navigate('/login')}
           className="btn btn-primary lift text-xs tracking-widest uppercase mx-auto"
           style={{ minWidth: '240px', padding: '16px 32px' }}
         >
-          Sign In Now
+          {user ? 'Create Secret' : 'Sign In Now'}
         </button>
       </section>
     </div>
