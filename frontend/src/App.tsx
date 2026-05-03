@@ -15,6 +15,7 @@ const ViewSecret = React.lazy(() => import('./pages/ViewSecret'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
 const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = React.lazy(() => import('./pages/TermsOfService'));
 const Authscreen = React.lazy(() => import('./components/Authscreen'));
 const Signup = React.lazy(() => import('./components/Signup'));
 const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
@@ -132,6 +133,7 @@ const App: React.FC = () => {
               <Route path="/admin/:id" element={<AdminDashboard />} />
               <Route path="/super-admin" element={<SuperAdmin />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
               <Route path="/login" element={<Authscreen />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

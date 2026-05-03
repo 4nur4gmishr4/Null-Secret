@@ -118,7 +118,7 @@ export default function Footer() {
                     </p>
                     <div className="flex gap-6">
                         <button onClick={() => navigate('/privacy')} className="text-[11px] hover:opacity-75 transition-opacity" style={{ color: 'var(--text-tertiary)' }}>Privacy Policy</button>
-                        <a href="https://github.com/4nur4gmishr4/Null-Secret/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-[11px] hover:opacity-75 transition-opacity" style={{ color: 'var(--text-tertiary)' }}>Terms of Service</a>
+                        <button onClick={() => navigate('/terms')} className="text-[11px] hover:opacity-75 transition-opacity" style={{ color: 'var(--text-tertiary)' }}>Terms of Service</button>
                     </div>
                 </div>
             </div>
