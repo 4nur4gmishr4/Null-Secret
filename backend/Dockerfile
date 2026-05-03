@@ -2,9 +2,11 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /src
 
+# Set GOTOOLCHAIN=auto globally to allow automatic toolchain downloads
+ENV GOTOOLCHAIN=auto
+
 # Download dependencies first for better Docker layer caching.
 COPY go.mod go.sum ./
-ENV GOTOOLCHAIN=auto
 RUN go mod download
 
 # Now copy source and build a fully static binary so the runtime image
