@@ -79,11 +79,8 @@ const Home: React.FC = () => {
       const user = auth.currentUser;
       const today = new Date().toISOString().split('T')[0];
 
-      // CRITICAL: Double-check limit before encryption
-      // This prevents bypass if the button is manually re-enabled via console
       try {
         if (user) {
-          // Firebase Transaction for Authenticated Users
           const usageRef = doc(db, 'usage', user.uid, 'daily', today);
           
           await runTransaction(db, async (transaction) => {
@@ -104,11 +101,6 @@ const Home: React.FC = () => {
             }
           });
         } else {
-          // Local Storage Fallback for Guests
-          // NOTE: Guest rate limiting via localStorage is advisory only.
-          // The server's per-IP rate limiter (store.Limiter) is the true enforcement
-          // mechanism. A determined user can bypass localStorage tracking by clearing
-          // storage or using incognito mode.
           const usageData = localStorage.getItem('ns_usage');
           let count = 0;
           if (usageData) {
@@ -124,24 +116,19 @@ const Home: React.FC = () => {
         }
       } catch (usageErr: unknown) {
         if (usageErr instanceof Error && usageErr.message === 'LIMIT_EXCEEDED') throw usageErr;
-        // Handle Firestore API disabled or network error
         console.error('Usage tracking failed', usageErr);
         const code = (usageErr as { code?: string } | null)?.code;
         if (code === 'permission-denied') {
           throw new Error('INFRASTRUCTURE_ERROR');
         }
-        // If not a limit error, we might want to block anyway for security
         throw new Error('SECURITY_CHECK_FAILED');
       }
 
-      // Proceed with Encryption
       let key = await generateKey();
       let saltStr: string | undefined;
 
       if (password) {
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
-        // Avoid String.fromCharCode(...salt) spread; chunked pattern is stack-safe
-        // for arbitrary lengths and produces identical base64.
         let saltBinary = '';
         for (let i = 0; i < salt.length; i++) {
           saltBinary += String.fromCharCode(salt[i]);
@@ -207,7 +194,6 @@ const Home: React.FC = () => {
 
       const data = await resp.json();
       if (data.id) {
-        // Log to History if authenticated
         if (user) {
           try {
             await addDoc(collection(db, 'users', user.uid, 'history'), {

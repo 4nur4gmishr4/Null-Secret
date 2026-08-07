@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 package config
 
 import (
@@ -11,15 +11,15 @@ import (
 )
 
 type Config struct {
-	Port           string
-	Env            string
-	AllowedOrigins []string
-	ViteAPIBase    string
-	TrustProxy     bool
-	SuperAdminKey  string
-	DBPath         string
-	MasterKey      []byte
-	BackupDir      string
+	Port		string
+	Env		string
+	AllowedOrigins	[]string
+	ViteAPIBase	string
+	TrustProxy	bool
+	SuperAdminKey	string
+	DBPath		string
+	MasterKey	[]byte
+	BackupDir	string
 }
 
 func Load() *Config {
@@ -63,7 +63,7 @@ func Load() *Config {
 
 	dbPath := strings.TrimSpace(os.Getenv("DB_PATH"))
 	if dbPath == "" {
-		dbPath = "nullsecret.db" // Default to current directory
+		dbPath = "nullsecret.db"
 	}
 
 	backupDir := strings.TrimSpace(os.Getenv("BACKUP_DIR"))
@@ -93,14 +93,14 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port:           port,
-		Env:            env,
-		AllowedOrigins: allowedOrigins,
-		ViteAPIBase:    viteAPIBase,
-		TrustProxy:     trustProxy,
-		SuperAdminKey:  superAdminKey,
-		DBPath:         dbPath,
-		MasterKey:      masterKey,
-		BackupDir:      backupDir,
+		Port:		port,
+		Env:		env,
+		AllowedOrigins:	allowedOrigins,
+		ViteAPIBase:	viteAPIBase,
+		TrustProxy:	trustProxy,
+		SuperAdminKey:	superAdminKey,
+		DBPath:		dbPath,
+		MasterKey:	masterKey,
+		BackupDir:	backupDir,
 	}
 }

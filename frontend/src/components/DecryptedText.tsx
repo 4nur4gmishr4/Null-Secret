@@ -7,7 +7,7 @@ interface DecryptedTextProps {
   maxIterations?: number;
   className?: string;
   onComplete?: () => void;
-  trigger?: number; // whenever this changes, re-trigger
+  trigger?: number;
 }
 
 const DecryptedText: React.FC<DecryptedTextProps> = ({
