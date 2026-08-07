@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
@@ -226,7 +226,7 @@ const Home: React.FC = () => {
       if (message === 'LIMIT_EXCEEDED') {
         setError(`You have reached the daily limit of ${DAILY_SECRET_LIMIT} secrets. The counter resets at midnight UTC.`);
       } else if (message === 'INFRASTRUCTURE_ERROR') {
-        setError('We could not reach the account service. If you self-host this app, make sure Firestore is enabled in your Firebase console.');
+        setError('We could not reach the account service. If you are the administrator, make sure Firestore is enabled in your Firebase console.');
       } else if (message === 'SECURITY_CHECK_FAILED') {
         setError('We could not verify your usage. Please refresh the page and try again.');
       } else if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
