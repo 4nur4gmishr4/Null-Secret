@@ -108,7 +108,7 @@ const DeviceSessions: React.FC = () => {
                 className="text-[10px] font-bold uppercase underline whitespace-nowrap"
                 style={{ color: 'var(--text-danger)' }}
               >
-                {signingOut ? 'Signing outâ€¦' : 'Sign out'}
+                {signingOut ? 'Signing out...' : 'Sign out'}
               </button>
             </div>
           </div>
