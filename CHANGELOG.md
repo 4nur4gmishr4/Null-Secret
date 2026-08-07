@@ -9,12 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ## [Unreleased]
 
 ### Added
-- Professional documentation set: `LICENSE` (MIT), `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`, `SUPPORT.md`.
+- Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`, `SUPPORT.md`.
 - `.github/ISSUE_TEMPLATE/` with bug-report and feature-request forms.
-- `.github/PULL_REQUEST_TEMPLATE.md` that mirrors the contributor checklist.
 
 ### Changed
-- `.gitignore` rewritten with sectioned, professional patterns. `.env.example` is now correctly excluded from the ignore list so contributors can bootstrap.
+- `.gitignore` rewritten with sectioned, professional patterns. `.env.example` is now correctly excluded from the ignore list so developers can bootstrap.
 - Footer no longer displays a hard-coded version string; the marketing copy now reads "Built for privacy".
 - `README.md` no longer references a `v1.0.0` version label.
 
