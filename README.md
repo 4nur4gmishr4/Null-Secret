@@ -247,7 +247,7 @@ Status check for the creator. Requires the admin key.
 
 ```bash
 curl -H "X-Admin-Key: $ADMIN_KEY" \
-     https://<your-render-app>.onrender.com/api/v1/secret/abc123/info
+     https://api.nullsecret.com/api/v1/secret/abc123/info
 ```
 
 Response `200 OK`:
@@ -266,7 +266,7 @@ Burn early. Requires the admin key. Idempotent.
 
 ```bash
 curl -X DELETE -H "X-Admin-Key: $ADMIN_KEY" \
-     https://<your-render-app>.onrender.com/api/v1/secret/abc123
+     https://api.nullsecret.com/api/v1/secret/abc123
 ```
 
 Response `200 OK`:
