@@ -50,7 +50,15 @@ const Home: React.FC = () => {
   const passwordStrength = estimatePasswordStrength(password);
 
   const handleFilesAdded = useCallback((newFiles: File[]) => {
-    setFiles(prev => [...prev, ...newFiles]);
+    setFiles(prev => {
+      const allFiles = [...prev, ...newFiles];
+      const totalSize = allFiles.reduce((acc, f) => acc + f.size, 0);
+      if (totalSize > 10 * 1024 * 1024) {
+        setError('Your files together must be smaller than 10 MB.');
+        return prev;
+      }
+      return allFiles;
+    });
   }, []);
 
   const removeFile = useCallback((index: number) => {
@@ -145,11 +153,8 @@ const Home: React.FC = () => {
 
       let plaintext = text;
       if (files.length > 0) {
-        let totalSize = 0;
         const zipObj: Record<string, Uint8Array> = {};
         for (const f of files) {
-          totalSize += f.size;
-          if (totalSize > 6 * 1024 * 1024) throw new Error('Your files together must be smaller than 6 MB.');
           const buffer = await f.arrayBuffer();
           zipObj[f.name] = new Uint8Array(buffer);
         }

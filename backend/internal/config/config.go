@@ -36,12 +36,12 @@ func Load() *Config {
 	if origins := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")); origins != "" {
 		for _, o := range strings.Split(origins, ",") {
 			if o = strings.TrimSpace(o); o != "" {
-				allowedOrigins = append(allowedOrigins, o)
+				allowedOrigins = append(allowedOrigins, strings.TrimRight(o, "/"))
 			}
 		}
 	}
 	if legacy := strings.TrimSpace(os.Getenv("ALLOWED_ORIGIN")); legacy != "" {
-		allowedOrigins = append(allowedOrigins, legacy)
+		allowedOrigins = append(allowedOrigins, strings.TrimRight(legacy, "/"))
 	}
 
 	viteAPIBase := strings.TrimSpace(os.Getenv("VITE_API_BASE"))
