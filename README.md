@@ -28,7 +28,7 @@ and deletes it the moment it expires or hits its view limit.
 - [Security Model](#security-model)
 - [Frontend Feature Map](#frontend-feature-map)
 - [Roadmap](#roadmap)
-- [Contributing](#contributing)
+- [Closed Source](#closed-source)
 - [License](#license)
 
 ---
@@ -564,20 +564,9 @@ The system already does:
 
 ---
 
-## Contributing
+## Closed Source
 
-1. Fork the repo.
-2. Branch: `git checkout -b feature/<short-description>`.
-3. Make changes and ensure both checks pass:
-
-   ```bash
-   cd backend  && go test ./... && go vet ./...
-   cd frontend && npm run build
-   ```
-
-4. Commit with a meaningful message and open a pull request.
-
-Tests and the production build must succeed before a PR is merged.
+This software is proprietary. We do not accept external pull requests, feature branches, or community contributions to the source code. If you find a security vulnerability, please see `SECURITY.md` to report it privately.
 
 ---
 
