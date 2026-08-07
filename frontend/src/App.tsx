@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -20,25 +20,43 @@ const ScrollToTop: React.FC = () => {
   return null;
 };
 
-const Landing = React.lazy(() => import('./pages/Landing'));
-const Home = React.lazy(() => import('./pages/Home'));
-const Success = React.lazy(() => import('./pages/Success'));
-const ViewSecret = React.lazy(() => import('./pages/ViewSecret'));
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
-const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
-const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
-const TermsOfService = React.lazy(() => import('./pages/TermsOfService'));
-const Authscreen = React.lazy(() => import('./components/Authscreen'));
-const Signup = React.lazy(() => import('./components/Signup'));
-const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
-const UsageHistory = React.lazy(() => import('./pages/UsageHistory'));
-const SecuritySettings = React.lazy(() => import('./pages/SecuritySettings'));
-const TwoFactorSetup = React.lazy(() => import('./pages/TwoFactorSetup'));
-const BiometricSetup = React.lazy(() => import('./pages/BiometricSetup'));
-const SessionTimeout = React.lazy(() => import('./pages/SessionTimeout'));
-const DeviceSessions = React.lazy(() => import('./pages/DeviceSessions'));
-const DestroyVault = React.lazy(() => import('./pages/DestroyVault'));
-const AccountSettings = React.lazy(() => import('./pages/AccountSettings'));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lazyWithRetry = (componentImport: () => Promise<{ default: React.ComponentType<any> }>) =>
+  React.lazy(async () => {
+    const pageHasBeenReloaded = sessionStorage.getItem('page_reloaded_for_update');
+    try {
+      const component = await componentImport();
+      sessionStorage.removeItem('page_reloaded_for_update');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenReloaded) {
+        sessionStorage.setItem('page_reloaded_for_update', 'true');
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+
+const Landing = lazyWithRetry(() => import('./pages/Landing'));
+const Home = lazyWithRetry(() => import('./pages/Home'));
+const Success = lazyWithRetry(() => import('./pages/Success'));
+const ViewSecret = lazyWithRetry(() => import('./pages/ViewSecret'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const SuperAdmin = lazyWithRetry(() => import('./pages/SuperAdmin'));
+const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
+const Authscreen = lazyWithRetry(() => import('./components/Authscreen'));
+const Signup = lazyWithRetry(() => import('./components/Signup'));
+const ForgotPassword = lazyWithRetry(() => import('./components/ForgotPassword'));
+const UsageHistory = lazyWithRetry(() => import('./pages/UsageHistory'));
+const SecuritySettings = lazyWithRetry(() => import('./pages/SecuritySettings'));
+const TwoFactorSetup = lazyWithRetry(() => import('./pages/TwoFactorSetup'));
+const BiometricSetup = lazyWithRetry(() => import('./pages/BiometricSetup'));
+const SessionTimeout = lazyWithRetry(() => import('./pages/SessionTimeout'));
+const DeviceSessions = lazyWithRetry(() => import('./pages/DeviceSessions'));
+const DestroyVault = lazyWithRetry(() => import('./pages/DestroyVault'));
+const AccountSettings = lazyWithRetry(() => import('./pages/AccountSettings'));
 
 import { useToast } from './contexts/ToastContext';
 
@@ -113,6 +131,19 @@ const OfflineDetector: React.FC = () => {
 
 const App: React.FC = () => {
   const [preloaderDone, setPreloaderDone] = useState(false);
+
+  React.useEffect(() => {
+    const handlePreloadError = (event: Event) => {
+      event.preventDefault();
+      console.warn('[Vite] Dynamic import preload error detected. Auto-reloading page...');
+      window.location.reload();
+    };
+
+    window.addEventListener('vite:preloadError', handlePreloadError);
+    return () => {
+      window.removeEventListener('vite:preloadError', handlePreloadError);
+    };
+  }, []);
 
   const handlePreloaderComplete = React.useCallback(() => {
     setPreloaderDone(true);
