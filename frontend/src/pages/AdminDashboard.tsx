@@ -150,7 +150,7 @@ const AdminDashboard: React.FC = () => {
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
                 <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
-              {burning ? 'Deletingâ€¦' : 'Delete now'}
+              {burning ? 'Deleting...' : 'Delete now'}
             </button>
             <p className="text-[10px] text-center mt-3 uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>
               This cannot be undone.

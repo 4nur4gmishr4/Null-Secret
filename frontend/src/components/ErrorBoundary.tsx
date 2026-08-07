@@ -56,7 +56,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             className="text-xs max-w-md"
             style={{ color: 'var(--text-secondary)' }}
           >
-            An unexpected error occurred. Your data is safe â€” the encryption key
+            An unexpected error occurred. Your data is safe — the encryption key
             never left your browser. Try reloading the page.
           </p>
           {this.state.error && (
