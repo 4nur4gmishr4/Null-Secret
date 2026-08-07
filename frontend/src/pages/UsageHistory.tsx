@@ -120,7 +120,7 @@ const UsageHistory: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-xs font-bold uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading your historyâ€¦</div>
+          <div className="text-center py-12 text-xs font-bold uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading your history...</div>
         ) : history.length === 0 ? (
           <div className="text-center py-12 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>You have not created any secrets yet. Start with the button below.</div>
         ) : (

@@ -232,7 +232,7 @@ const Home: React.FC = () => {
           <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Locking your messageâ€¦
+          Locking your message...
         </p>
       </div>
     );
@@ -285,7 +285,7 @@ const Home: React.FC = () => {
           id="message-input"
           className="w-full h-48 p-4 focus:outline-none resize-none mono text-sm"
           style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
-          placeholder="Type whatever you want to keep privateâ€¦"
+          placeholder="Type whatever you want to keep private..."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
@@ -365,7 +365,7 @@ const Home: React.FC = () => {
         {passwordStrength.hints.length > 0 && (
           <ul className="text-[10px] space-y-0.5 pt-1" style={{ color: 'var(--text-tertiary)' }}>
             {passwordStrength.hints.map((hint) => (
-              <li key={hint}>â€¢ {hint}</li>
+              <li key={hint}>• {hint}</li>
             ))}
           </ul>
         )}
