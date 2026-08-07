@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -31,7 +32,7 @@ var (
 
 const (
 	maxSecrets = 1000
-	maxPayload = 1024 * 1024 // 1MB
+	maxPayload = 15 * 1024 * 1024 // 15MB to account for 10MB files + Base64 overhead
 )
 
 const schema = `
@@ -296,7 +297,7 @@ func generateID() (string, error) {
 
 func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string, string, error) {
 	if len(payload) > maxPayload {
-		return "", "", errors.New("payload exceeds maximum allowed size (1MB)")
+		return "", "", errors.New("payload exceeds maximum allowed size (15MB)")
 	}
 
 	encPayload, err := encryptPayload(payload, s.masterKey)
@@ -495,7 +496,7 @@ func (s *Storage) startTTLWorker(ctx context.Context) {
 			return
 		case <-ticker.C:
 			err := execWithRetry(func() error {
-				res, err := s.db.Exec("DELETE FROM secrets WHERE expires_at < CURRENT_TIMESTAMP")
+				res, err := s.db.Exec("DELETE FROM secrets WHERE expires_at < ?", time.Now().UTC())
 				if err == nil {
 					if affected, _ := res.RowsAffected(); affected > 0 {
 						slog.Info("TTL Worker purged expired secrets", "count", affected)
@@ -519,6 +520,7 @@ func (s *Storage) startBackupWorker(ctx context.Context) {
 			return
 		case <-ticker.C:
 			backupFile := filepath.Join(s.backupDir, "backup.db")
+			_ = os.Remove(backupFile)
 			sanitizedPath := strings.ReplaceAll(backupFile, "'", "''")
 			err := execWithRetry(func() error {
 				_, err := s.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", sanitizedPath))

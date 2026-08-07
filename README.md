@@ -27,7 +27,7 @@ and deletes it the moment it expires or hits its view limit.
 
 ## Quick Start
 
-**For users:** See [USER_GUIDE.md](./USER_GUIDE.md) for a simple, non-technical guide on how to use Null-Secret.
+**For users:** See [USER_GUIDE.md](./docs/USER_GUIDE.md) for a simple, non-technical guide on how to use Null-Secret.
 
 **For developers:** Jump to [Local Development](#local-development) to get started.
 
@@ -44,7 +44,7 @@ and deletes it the moment it expires or hits its view limit.
   Once that limit is reached, the message is gone forever.
 - Optional second password the recipient must type, derived through
   PBKDF2-SHA256 with 600 000 iterations.
-- Optional **file attachments** up to 6 MB combined, packed into a Zip
+- Optional **file attachments** up to 10 MB combined, packed into a Zip
   inside the encrypted blob, never seen by the server.
 - Optional Firebase **sign-in** that adds a 30-secret-per-day cap and a
   history page that lists only IDs and timestamps (never message content).
@@ -274,12 +274,12 @@ register a free job at **cron-job.org** that hits
 
 ### C. Wire CORS
 
-Once Vercel gives you a URL like `https://null-secret.vercel.app`,
+Once Vercel gives you a URL like `https://your-frontend.vercel.app`,
 go back to Render and update `ALLOWED_ORIGINS` to include it
 (comma-separate multiple origins for previews):
 
 ```
-ALLOWED_ORIGINS=https://null-secret.vercel.app,https://null-secret-git-main-you.vercel.app
+ALLOWED_ORIGINS=https://your-frontend.vercel.app,https://your-frontend-git-main-you.vercel.app
 ```
 
 Redeploy. Done.
@@ -388,7 +388,7 @@ appears in any other response.
 
 Errors:
 - `400` — empty payload or malformed JSON
-- `413` — payload exceeds 10 MB
+- `413` — payload exceeds 15 MB
 - `429` — rate limit (10 req/min/IP)
 - `503` — server at capacity (refuses to OOM)
 
@@ -417,7 +417,7 @@ Status check for the creator. Requires the admin key.
 
 ```bash
 curl -H "X-Admin-Key: $ADMIN_KEY" \
-     https://api.example.com/api/v1/secret/abc123/info
+     https://<your-render-app>.onrender.com/api/v1/secret/abc123/info
 ```
 
 Response `200 OK`:
@@ -436,7 +436,7 @@ Burn early. Requires the admin key. Idempotent.
 
 ```bash
 curl -X DELETE -H "X-Admin-Key: $ADMIN_KEY" \
-     https://api.example.com/api/v1/secret/abc123
+     https://<your-render-app>.onrender.com/api/v1/secret/abc123
 ```
 
 Response `200 OK`:
@@ -525,7 +525,7 @@ UI conventions:
 
 ## Roadmap
 
-The full backlog lives in [`FEATURES.md`](./FEATURES.md). Items that
+The full backlog lives in [`FEATURES.md`](./docs/FEATURES.md). Items that
 require backend work (TOTP, WebAuthn, custom slug aliases, time-window
 unlock, email-gated unlock, view notifications, captcha, hardware-key
 signing, ECDH forward secrecy, IP allowlist, per-secret access log,
@@ -539,7 +539,7 @@ The system already does:
 - Browser-side AES-256-GCM encryption
 - Optional password layer with PBKDF2 (600,000 iterations)
 - One-time, multi-view, or time-limited links
-- File attachments up to 6 MB total (single file inline, multiple files auto-zipped)
+- File attachments up to 10 MB total (single file inline, multiple files auto-zipped)
 - SQLite-based storage with automatic GC
 - Admin links so the creator can see view counts and burn early
 - Email and Google sign-in (Firebase) with daily quota tracking

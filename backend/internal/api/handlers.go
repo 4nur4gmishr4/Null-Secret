@@ -23,7 +23,7 @@ import (
 
 const (
 	adminKeyHeader = "X-Admin-Key"
-	maxRequestBody = 1 * 1024 * 1024 // 1 MB
+	maxRequestBody = 15 * 1024 * 1024 // 15 MB to account for 10MB files + Base64 overhead
 )
 
 type API struct {
@@ -271,7 +271,7 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	if err := dec.Decode(&req); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
-			writeError(w, http.StatusRequestEntityTooLarge, "payload exceeds 10MB")
+			writeError(w, http.StatusRequestEntityTooLarge, "payload exceeds 15MB")
 			return
 		}
 		writeError(w, http.StatusBadRequest, "invalid request body")

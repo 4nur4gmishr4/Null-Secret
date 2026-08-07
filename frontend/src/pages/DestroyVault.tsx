@@ -10,6 +10,8 @@ import {
   getDocs,
   writeBatch,
   doc,
+  query,
+  limit,
 } from 'firebase/firestore';
 
 const CONFIRM_PHRASE = 'destroy my vault';
@@ -25,18 +27,16 @@ function describeAuthError(err: unknown): string {
  */
 async function deleteHistoryCollection(uid: string): Promise<void> {
   const ref = collection(db, 'users', uid, 'history');
+  const q = query(ref, limit(FIRESTORE_BATCH_LIMIT));
   while (true) {
-    const snapshot = await getDocs(ref);
+    const snapshot = await getDocs(q);
     if (snapshot.empty) return;
     const batch = writeBatch(db);
-    let count = 0;
     for (const document of snapshot.docs) {
       batch.delete(document.ref);
-      count++;
-      if (count >= FIRESTORE_BATCH_LIMIT) break;
     }
     await batch.commit();
-    if (snapshot.size <= FIRESTORE_BATCH_LIMIT) return;
+    if (snapshot.size < FIRESTORE_BATCH_LIMIT) return;
   }
 }
 
