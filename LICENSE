@@ -1,21 +1,14 @@
-MIT License
+Copyright (c) 2026 Anurag Mishra. All Rights Reserved.
 
-Copyright (c) 2026 Anurag Mishra
+PROPRIETARY AND CONFIDENTIAL
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This source code, including but not limited to all software, documentation, and graphical assets contained within this repository (the "Software"), is the confidential and proprietary intellectual property of Anurag Mishra.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. NO RIGHT TO COPY OR USE
+You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, or using this Software, in whole or in part, for any purpose (commercial or non-commercial), without the explicit, prior, written permission of the copyright holder.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. NO OPEN SOURCE
+This is NOT open-source software. The presence of this code in a public repository on GitHub (or any other platform) does not grant any implicit or explicit licenses under copyright, patent, trademark, or trade secret law. You may view the source code solely for the purpose of reading it on the platform where it is hosted, but you may not download, clone, fork, or execute it.
+
+3. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
