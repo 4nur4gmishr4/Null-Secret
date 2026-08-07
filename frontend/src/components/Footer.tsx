@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import { useNavigate } from 'react-router-dom';
 
 export default function Footer() {
@@ -34,7 +35,7 @@ export default function Footer() {
                                 Designed, developed, and managed by Anurag Mishra
                             </p>
                             <p className="text-[11px] mt-2" style={{ color: 'var(--text-tertiary)' }}>
-                                © 2026 Null-Secret. All rights reserved.
+                                Â© 2026 Null-Secret. All rights reserved.
                             </p>
                         </div>
                     </div>

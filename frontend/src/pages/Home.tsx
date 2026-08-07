@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
@@ -245,7 +246,7 @@ const Home: React.FC = () => {
           <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Locking your message…
+          Locking your messageâ€¦
         </p>
       </div>
     );
@@ -278,7 +279,7 @@ const Home: React.FC = () => {
             aria-label="Dismiss"
             style={{ border: 'none', background: 'none', color: 'var(--text-danger)', padding: '12px', minWidth: '44px', minHeight: '44px' }}
           >
-            ✕
+            âœ•
           </button>
         </div>
       )}
@@ -298,7 +299,7 @@ const Home: React.FC = () => {
           id="message-input"
           className="w-full h-48 p-4 focus:outline-none resize-none mono text-sm"
           style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
-          placeholder="Type whatever you want to keep private…"
+          placeholder="Type whatever you want to keep privateâ€¦"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
@@ -378,7 +379,7 @@ const Home: React.FC = () => {
         {passwordStrength.hints.length > 0 && (
           <ul className="text-[10px] space-y-0.5 pt-1" style={{ color: 'var(--text-tertiary)' }}>
             {passwordStrength.hints.map((hint) => (
-              <li key={hint}>• {hint}</li>
+              <li key={hint}>â€¢ {hint}</li>
             ))}
           </ul>
         )}

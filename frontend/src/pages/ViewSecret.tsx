@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
@@ -101,7 +102,7 @@ const ViewSecret: React.FC = () => {
           <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Unlocking your message…
+          Unlocking your messageâ€¦
         </p>
       </div>
     );
@@ -193,7 +194,7 @@ const ViewSecret: React.FC = () => {
             {views
               ? views.current < views.limit
                 ? `Open ${views.current} of ${views.limit}. ${views.limit - views.current} more open(s) before this message is gone forever.`
-                : 'This was the final view — the message has been deleted forever.'
+                : 'This was the final view â€” the message has been deleted forever.'
               : 'This message has been deleted forever.'}
           </span>
         </div>
