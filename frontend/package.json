@@ -16,14 +16,14 @@
     "firebase": "^12.17.0",
     "lottie-react": "^2.4.1",
     "qrcode.react": "^4.2.0",
-    "react": "^19.2.5",
+    "react": "^19.2.8",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@types/node": "^26.1.2",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^9.39.4",
