@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 package store
 
 import (
@@ -26,14 +26,16 @@ import (
 )
 
 var (
-	ErrCapacityExceeded = errors.New("server capacity exceeded, try again later")
-	ErrNotFound         = errors.New("secret not found")
-	ErrExpired          = errors.New("secret expired")
+	ErrCapacityExceeded	= errors.New("server capacity exceeded, try again later")
+	ErrNotFound		= errors.New("secret not found")
+	ErrExpired		= errors.New("secret expired")
+	ErrAliasTaken		= errors.New("alias is already taken")
+	ErrLocked		= errors.New("secret is time-locked")
 )
 
 const (
-	maxSecrets = 1000
-	maxPayload = 15 * 1024 * 1024 // 15MB to account for 10MB files + Base64 overhead
+	maxSecrets	= 1000
+	maxPayload	= 15 * 1024 * 1024
 )
 
 const schema = `
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS secrets (
 	data BLOB,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	expires_at DATETIME,
+	unlock_at DATETIME,
 	view_limit INTEGER,
 	views INTEGER DEFAULT 0
 );
@@ -51,22 +54,22 @@ CREATE INDEX IF NOT EXISTS idx_created_at ON secrets(created_at);
 `
 
 type limiterEntry struct {
-	ip   string
-	hits []time.Time
+	ip	string
+	hits	[]time.Time
 }
 
 type RateLimiter struct {
-	mu    sync.Mutex
-	hits  map[string]*list.Element
-	order *list.List
-	max   int
+	mu	sync.Mutex
+	hits	map[string]*list.Element
+	order	*list.List
+	max	int
 }
 
 func NewRateLimiter() *RateLimiter {
 	return &RateLimiter{
-		hits:  make(map[string]*list.Element),
-		order: list.New(),
-		max:   10000,
+		hits:	make(map[string]*list.Element),
+		order:	list.New(),
+		max:	10000,
 	}
 }
 
@@ -101,7 +104,7 @@ func (rl *RateLimiter) Allow(ip string) bool {
 		}
 	}
 
-	if len(kept) >= 20 { // 20 requests / minute
+	if len(kept) >= 20 {
 		entry.hits = kept
 		return false
 	}
@@ -143,12 +146,12 @@ func (rl *RateLimiter) cleanup(ctx context.Context) {
 }
 
 type Storage struct {
-	db        *sql.DB
-	Limiter   *RateLimiter
-	cancel    context.CancelFunc
-	wg        sync.WaitGroup
-	masterKey []byte
-	backupDir string
+	db		*sql.DB
+	Limiter		*RateLimiter
+	cancel		context.CancelFunc
+	wg		sync.WaitGroup
+	masterKey	[]byte
+	backupDir	string
 }
 
 func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, error) {
@@ -161,7 +164,8 @@ func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, er
 		return nil, err
 	}
 
-	// Optimize SQLite for concurrent reads/writes
+	db.Exec("ALTER TABLE secrets ADD COLUMN unlock_at DATETIME;")
+
 	db.Exec("PRAGMA journal_mode=WAL;")
 	db.Exec("PRAGMA synchronous=NORMAL;")
 	db.Exec("PRAGMA busy_timeout=5000;")
@@ -170,11 +174,11 @@ func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, er
 
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Storage{
-		db:        db,
-		Limiter:   NewRateLimiter(),
-		cancel:    cancel,
-		masterKey: masterKey,
-		backupDir: backupDir,
+		db:		db,
+		Limiter:	NewRateLimiter(),
+		cancel:		cancel,
+		masterKey:	masterKey,
+		backupDir:	backupDir,
 	}
 
 	s.wg.Add(3)
@@ -209,8 +213,8 @@ func (s *Storage) DB() *sql.DB {
 }
 
 type StorageStats struct {
-	ActiveSecrets     int   `json:"activeSecrets"`
-	TotalPayloadBytes int64 `json:"totalPayloadBytes"`
+	ActiveSecrets		int	`json:"activeSecrets"`
+	TotalPayloadBytes	int64	`json:"totalPayloadBytes"`
 }
 
 func (s *Storage) Stats() StorageStats {
@@ -224,8 +228,8 @@ func (s *Storage) Stats() StorageStats {
 	}
 
 	return StorageStats{
-		ActiveSecrets:     active,
-		TotalPayloadBytes: totalBytes,
+		ActiveSecrets:		active,
+		TotalPayloadBytes:	totalBytes,
 	}
 }
 
@@ -296,7 +300,7 @@ func generateID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string, string, error) {
+func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int, alias string, unlockAt *time.Time) (string, string, error) {
 	if len(payload) > maxPayload {
 		return "", "", errors.New("payload exceeds maximum allowed size (15MB)")
 	}
@@ -306,9 +310,12 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 		return "", "", err
 	}
 
-	id, err := generateID()
-	if err != nil {
-		return "", "", err
+	id := alias
+	if id == "" {
+		id, err = generateID()
+		if err != nil {
+			return "", "", err
+		}
 	}
 	adminKey, err := generateID()
 	if err != nil {
@@ -337,9 +344,9 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 		}
 
 		_, err = tx.Exec(`
-			INSERT INTO secrets (id, admin_key, data, expires_at, view_limit, views)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`, id, hashedAdminKey, encPayload, expiresAt, viewLimit, 0)
+			INSERT INTO secrets (id, admin_key, data, expires_at, unlock_at, view_limit, views)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`, id, hashedAdminKey, encPayload, expiresAt, unlockAt, viewLimit, 0)
 
 		if err != nil {
 			return err
@@ -348,6 +355,9 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int) (string,
 	})
 
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return "", "", ErrAliasTaken
+		}
 		return "", "", err
 	}
 
@@ -358,11 +368,12 @@ func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoRespons
 	var storedAdminKey string
 	var views, viewLimit int
 	var expiresAt time.Time
+	var unlockAt *time.Time
 
 	err := s.db.QueryRow(`
-		SELECT admin_key, views, view_limit, expires_at 
+		SELECT admin_key, views, view_limit, expires_at, unlock_at 
 		FROM secrets WHERE id = ?
-	`, id).Scan(&storedAdminKey, &views, &viewLimit, &expiresAt)
+	`, id).Scan(&storedAdminKey, &views, &viewLimit, &expiresAt, &unlockAt)
 
 	if err != nil {
 		return nil, false
@@ -377,14 +388,13 @@ func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoRespons
 	}
 
 	return &models.SecretInfoResponse{
-		Views:     views,
-		ViewLimit: viewLimit,
-		ExpiresAt: expiresAt,
+		Views:		views,
+		ViewLimit:	viewLimit,
+		ExpiresAt:	expiresAt,
+		UnlockAt:	unlockAt,
 	}, true
 }
 
-// validateAdminKey compares the stored hashed admin key with the provided plaintext
-// admin key using constant-time comparison to prevent timing attacks.
 func validateAdminKey(storedHash, providedKey string) bool {
 	hashedProvided := hashAdminKey(providedKey)
 	bStored := []byte(storedHash)
@@ -417,7 +427,9 @@ func (s *Storage) Burn(id string, adminKey string) bool {
 func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 	var payload []byte
 	var expiresAt time.Time
+	var unlockAt *time.Time
 	var viewLimit, views int
+	var lockedSecret *models.Secret
 
 	err := execWithRetry(func() error {
 		tx, err := s.db.Begin()
@@ -427,9 +439,9 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 		defer tx.Rollback()
 
 		err = tx.QueryRow(`
-			SELECT data, expires_at, view_limit, views 
+			SELECT data, expires_at, unlock_at, view_limit, views 
 			FROM secrets WHERE id = ?
-		`, id).Scan(&payload, &expiresAt, &viewLimit, &views)
+		`, id).Scan(&payload, &expiresAt, &unlockAt, &viewLimit, &views)
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -442,6 +454,13 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 			tx.Exec("DELETE FROM secrets WHERE id = ?", id)
 			tx.Commit()
 			return ErrExpired
+		}
+
+		if unlockAt != nil && time.Now().UTC().Before(*unlockAt) {
+			lockedSecret = &models.Secret{
+				UnlockAt: unlockAt,
+			}
+			return ErrLocked
 		}
 
 		views++
@@ -460,6 +479,9 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 	})
 
 	if err != nil {
+		if errors.Is(err, ErrLocked) {
+			return lockedSecret, err
+		}
 		return nil, err
 	}
 
@@ -469,11 +491,12 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 	}
 
 	secret := &models.Secret{
-		ID:        id,
-		Payload:   decPayload,
-		ExpiresAt: expiresAt,
-		ViewLimit: viewLimit,
-		Views:     views,
+		ID:		id,
+		Payload:	decPayload,
+		ExpiresAt:	expiresAt,
+		UnlockAt:	unlockAt,
+		ViewLimit:	viewLimit,
+		Views:		views,
 	}
 
 	return secret, nil

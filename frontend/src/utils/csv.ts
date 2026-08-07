@@ -23,7 +23,7 @@ export function buildCsv(headers: readonly string[], rows: readonly (readonly st
  */
 export function downloadCsv(filename: string, csv: string): void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }); // BOM for Excel compatibility
+  const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -32,6 +32,5 @@ export function downloadCsv(filename: string, csv: string): void {
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
-  // Defer revocation by a tick so Safari has time to start the download.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

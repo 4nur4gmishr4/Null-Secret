@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 
 const CONFIRM_PHRASE = 'destroy my vault';
-const FIRESTORE_BATCH_LIMIT = 400; // Firestore hard cap is 500 writes/batch; 400 leaves headroom.
+const FIRESTORE_BATCH_LIMIT = 400;
 
 function describeAuthError(err: unknown): string {
   return friendlyAuthError(err, 'We could not delete your vault right now. Please try again.');
@@ -54,7 +54,6 @@ async function deleteUsageCollection(uid: string): Promise<void> {
   for (const document of snapshot.docs) {
     batch.delete(document.ref);
   }
-  // The umbrella `usage/{uid}` doc itself, if it has scalar fields, also goes.
   batch.delete(doc(db, 'usage', uid));
   await batch.commit();
 }
@@ -84,13 +83,9 @@ const DestroyVault: React.FC = () => {
     setDeleting(true);
     setError(null);
     try {
-      // Order matters: clean up data first, then the auth account.
-      // If account delete fails, the user can retry without orphan data.
       await deleteHistoryCollection(user.uid);
       await deleteUsageCollection(user.uid);
       await user.delete();
-      // After delete the auth state listener will fire null and the layout
-      // will route us. Navigate explicitly so the message shows.
       navigate('/');
     } catch (err) {
       setError(describeAuthError(err));

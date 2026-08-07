@@ -16,8 +16,6 @@ const Success: React.FC = () => {
   const adminKey = location.state?.adminKey;
   
   React.useEffect(() => {
-    // The adminKey is now exclusively passed via the URL hash (#adminKey)
-    // to strictly prevent "Clear text storage of sensitive information" alerts in CodeQL.
   }, [adminKey, id]);
   
   const [copied, setCopied] = useState(false);

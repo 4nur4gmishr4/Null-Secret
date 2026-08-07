@@ -15,7 +15,6 @@ const Landing: React.FC = () => {
       setUser(currentUser);
     });
     
-    // Lazy load the lottie JSON to reduce initial bundle size
     import('../assets/lotties/privacyfull.json').then((module) => {
       setPrivacyfullData(module.default);
     });

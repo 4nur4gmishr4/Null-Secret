@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 package api
 
 import (
@@ -21,7 +21,6 @@ func setupTestStorage(t *testing.T) *store.Storage {
 	}
 	return s
 }
-
 
 func TestHandleHealthz(t *testing.T) {
 	cfg := &config.Config{}
@@ -54,9 +53,9 @@ func TestHandleCreateSecret(t *testing.T) {
 	a := NewAPI(s, cfg)
 
 	payload := models.CreateSecretRequest{
-		Payload:   []byte("super_secret_payload"),
-		Expiry:    1,
-		ViewLimit: 1,
+		Payload:	[]byte("super_secret_payload"),
+		Expiry:		1,
+		ViewLimit:	1,
 	}
 	body, _ := json.Marshal(payload)
 
@@ -129,9 +128,9 @@ func TestHandleCreateSecret_CapsExpiry(t *testing.T) {
 	a := NewAPI(s, cfg)
 
 	payload := models.CreateSecretRequest{
-		Payload:   []byte("test"),
-		Expiry:    9999,    // should be capped to 168
-		ViewLimit: 100,     // should be capped to 10
+		Payload:	[]byte("test"),
+		Expiry:		9999,
+		ViewLimit:	100,
 	}
 	body, _ := json.Marshal(payload)
 
@@ -150,7 +149,6 @@ func TestHandleCreateSecret_CapsExpiry(t *testing.T) {
 		t.Fatalf("decode error: %v", err)
 	}
 
-	// Verify the stored secret has capped values by retrieving its info
 	info, ok := s.GetInfo(resp.ID, resp.AdminKey)
 	if !ok {
 		t.Fatal("could not retrieve secret info")
@@ -216,8 +214,7 @@ func TestHandlePurgeAll_Authorized(t *testing.T) {
 	defer s.Close()
 	a := NewAPI(s, cfg)
 
-	// Store a secret first
-	_, _, err := s.Store([]byte("to-purge"), 1, 1)
+	_, _, err := s.Store([]byte("to-purge"), 1, 1, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
