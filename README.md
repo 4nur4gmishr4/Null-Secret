@@ -173,7 +173,6 @@ null-secret/
 │   ├── package.json
 │   ├── vite.config.ts                # PWA, code splitting
 │   └── vercel.json                   # SPA fallback rewrite
-├── render.yaml                       # One-click backend deploy on Render
 ├── FEATURES.md                       # Roadmap
 ├── .gitignore
 └── README.md
@@ -281,8 +280,7 @@ Response `200 OK`:
 { "status": "OK", "storage": "healthy" }
 ```
 
-Used by the navbar Wi-Fi indicator and the recommended Render
-keep-alive cron.
+Used by the navbar Wi-Fi indicator.
 
 ---
 

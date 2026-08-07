@@ -90,7 +90,7 @@ The following will usually be closed without a fix unless you demonstrate user-i
 - Missing rate limits on the Vite dev server, or anything exposed only in development mode.
 - DoS attacks that require flooding faster than the documented rate limits allow.
 - Social-engineering or phishing against users.
-- Vulnerabilities in third-party platforms we rely on (Firebase, Render, Vercel). Please report those to the vendor directly.
+- Vulnerabilities in third-party platforms we rely on (e.g. Firebase). Please report those to the vendor directly.
 - Missing `SameSite` attributes on cookies we do not set.
 - Issues in outdated browsers that Chromium, Firefox, or Safari no longer support.
 - Self-XSS that requires the victim to paste attacker-controlled content into DevTools.
