@@ -100,7 +100,7 @@ const ViewSecret: React.FC = () => {
           <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Unlocking your messageâ€¦
+          Unlocking your message...
         </p>
       </div>
     );
@@ -190,7 +190,7 @@ const ViewSecret: React.FC = () => {
             {views
               ? views.current < views.limit
                 ? `Open ${views.current} of ${views.limit}. ${views.limit - views.current} more open(s) before this message is gone forever.`
-                : 'This was the final view â€” the message has been deleted forever.'
+                : 'This was the final view — the message has been deleted forever.'
               : 'This message has been deleted forever.'}
           </span>
         </div>

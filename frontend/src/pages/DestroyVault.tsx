@@ -163,7 +163,7 @@ const DestroyVault: React.FC = () => {
             cursor: phraseMatches && !deleting ? 'pointer' : 'not-allowed',
           }}
         >
-          {deleting ? 'Deletingâ€¦' : 'Destroy vault permanently'}
+          {deleting ? 'Deleting...' : 'Destroy vault permanently'}
         </button>
       </div>
     </div>
