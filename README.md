@@ -1,5 +1,11 @@
 # Null-Secret
 
+[![CI](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/ci.yml/badge.svg)](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/codeql.yml/badge.svg)](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/codeql.yml)
+[![Dependabot Status](https://badgen.net/github/dependabot/4nur4gmishr4/Null-Secret)](https://github.com/4nur4gmishr4/Null-Secret/network/dependencies)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/4nur4gmishr4/Null-Secret?filename=backend%2Fgo.mod)](https://github.com/4nur4gmishr4/Null-Secret)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 A zero-knowledge, end-to-end encrypted secret-sharing service. The browser
 encrypts every message with **AES-256-GCM** before it leaves your device.
 The server only ever stores ciphertext, holds it in SQLite database,

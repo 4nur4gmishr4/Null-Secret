@@ -1,0 +1,24 @@
+# CODEOWNERS
+# This file defines who automatically gets requested for review when a pull request 
+# modifies certain files or directories in the Null-Secret repository.
+
+# Global default: Any change requires a review from the core maintainer.
+* @4nur4gmishr4
+
+# Backend (Go & SQLite)
+# Changes to the core API, storage, and rate limiting require deep architectural review.
+/backend/ @4nur4gmishr4
+
+# Frontend (React, TypeScript & Web Crypto)
+# Changes to the encryption flow or React components.
+/frontend/ @4nur4gmishr4
+
+# CI/CD & Infrastructure
+# Changes to GitHub Actions, Render deployments, or Dependabot require operational review.
+/.github/workflows/ @4nur4gmishr4
+/render.yaml @4nur4gmishr4
+
+# Documentation & Governance
+# Minor typos in docs can technically be merged without a block, but we route them here for visibility.
+/docs/ @4nur4gmishr4
+/*.md @4nur4gmishr4
