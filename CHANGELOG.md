@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ## [Unreleased]
 
 ### Added
-- Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`, `SUPPORT.md`.
+- Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `ARCHITECTURE.md`, `API.md`, `SUPPORT.md`.
 - `.github/ISSUE_TEMPLATE/` with bug-report and feature-request forms.
 
 ### Changed
