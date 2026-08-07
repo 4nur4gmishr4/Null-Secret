@@ -1,7 +1,7 @@
 # Null-Secret
 
 > [!CAUTION]
-> **PROPRIETARY SOFTWARE — NOT OPEN SOURCE**
+> **PROPRIETARY SOFTWARE â€” NOT OPEN SOURCE**
 > The Null-Secret application is free to use, but the source code within this repository is strictly proprietary. You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, or re-hosting this code in whole or in part without explicit written permission. See `LICENSE` for details.
 
 [![CI](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/ci.yml/badge.svg)](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/ci.yml)
@@ -17,13 +17,10 @@ and deletes it the moment it expires or hits its view limit.
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
 - [What It Does](#what-it-does)
 - [Architecture](#architecture)
 - [Project Layout](#project-layout)
-- [Local Development](#local-development)
-- [Production Deployment](#production-deployment)
-- [Configuration Reference](#configuration-reference)
+
 - [API Reference](#api-reference)
 - [Security Model](#security-model)
 - [Frontend Feature Map](#frontend-feature-map)
@@ -33,20 +30,12 @@ and deletes it the moment it expires or hits its view limit.
 
 ---
 
-## Quick Start
-
-**For users:** See [USER_GUIDE.md](./docs/USER_GUIDE.md) for a simple, non-technical guide on how to use Null-Secret.
-
-**For developers:** Jump to [Local Development](#local-development) to get started.
-
----
-
 ## What It Does
 
 - Creates a **one-time link** (`/v/{id}#{key}`) that another person can open
   to read the message you sent.
 - Encrypts the message **inside your browser** with `window.crypto.subtle`
-  using AES-256-GCM. The decryption key never leaves your device — it
+  using AES-256-GCM. The decryption key never leaves your device â€” it
   travels in the URL fragment, which browsers refuse to send to servers.
 - Lets the recipient open the link a fixed number of times (default 1).
   Once that limit is reached, the message is gone forever.
@@ -65,37 +54,37 @@ quota counter, a history view, and account-level security settings.
 ## Architecture
 
 ```
-┌─ Browser (React 19 + Vite, Web Crypto API) ─────────────────────────┐
-│                                                                     │
-│   ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐    │
-│   │ AES-256-GCM  │  │ PBKDF2-SHA256│  │ Bucket-padded payload  │    │
-│   │ encrypt      │  │ key stretch  │  │ (1K / 5K / 10K / 100K) │    │
-│   └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘    │
-│          └─────────────────┴──────────────────────┘                 │
-│                            │                                        │
-│                            ▼                                        │
-│                POST /api/v1/secret  { payload, expiry, viewLimit }  │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │
-                             ▼
-┌─ Go API (chi router, SQLite database) ─────────────────────────────┐
-│                                                                     │
-│   ┌─────────────────────────────────────────────────────────────┐   │
-│   │ SQLite database with secrets table                           │   │
-│   │ Background sweeper deletes expired entries every minute     │   │
-│   │ Token-bucket rate limiter (100 req/sec global)               │   │
-│   │ Atomic delete on view limit reach                           │   │
-│   └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+â”Œâ”€ Browser (React 19 + Vite, Web Crypto API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                                                                     â”‚
+â”‚   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”‚
+â”‚   â”‚ AES-256-GCM  â”‚  â”‚ PBKDF2-SHA256â”‚  â”‚ Bucket-padded payload  â”‚    â”‚
+â”‚   â”‚ encrypt      â”‚  â”‚ key stretch  â”‚  â”‚ (1K / 5K / 10K / 100K) â”‚    â”‚
+â”‚   â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â”‚
+â”‚          â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚
+â”‚                            â”‚                                        â”‚
+â”‚                            â–¼                                        â”‚
+â”‚                POST /api/v1/secret  { payload, expiry, viewLimit }  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                             â”‚
+                             â–¼
+â”Œâ”€ Go API (chi router, SQLite database) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                                                                     â”‚
+â”‚   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚   â”‚ SQLite database with secrets table                           â”‚   â”‚
+â”‚   â”‚ Background sweeper deletes expired entries every minute     â”‚   â”‚
+â”‚   â”‚ Token-bucket rate limiter (100 req/sec global)               â”‚   â”‚
+â”‚   â”‚ Atomic delete on view limit reach                           â”‚   â”‚
+â”‚   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ```
-┌─ Optional Firebase (only when the user is signed in) ───────────────┐
-│   • Authentication (Email/Password, Google)                         │
-│   • Firestore                                                       │
-│       users/{uid}/history    list of created secret IDs             │
-│       usage/{uid}/daily/{ymd} integer counter for the daily cap     │
-└─────────────────────────────────────────────────────────────────────┘
+â”Œâ”€ Optional Firebase (only when the user is signed in) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   â€¢ Authentication (Email/Password, Google)                         â”‚
+â”‚   â€¢ Firestore                                                       â”‚
+â”‚       users/{uid}/history    list of created secret IDs             â”‚
+â”‚       usage/{uid}/daily/{ymd} integer counter for the daily cap     â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 **Privacy properties:**
@@ -110,254 +99,78 @@ quota counter, a history view, and account-level security settings.
 
 ```
 null-secret/
-├── backend/                          # Go 1.22 API
-│   ├── cmd/
-│   │   └── api/main.go               # Entry point; reads $PORT
-│   ├── internal/
-│   │   ├── api/handlers.go           # CORS, CSP, routes, rate limit
-│   │   ├── config/                   # Configuration management
-│   │   ├── models/                   # Request/response DTOs
-│   │   └── store/                    # SQLite storage, GC, rate limiter, tests
-│   ├── go.mod
-│   ├── go.sum
-│   └── Dockerfile                    # Multi-stage, distroless, non-root
-├── frontend/                         # React 19 + Vite + TypeScript
-│   ├── public/                       # PWA assets
-│   ├── src/
-│   │   ├── App.tsx                   # Routes + Preloader gate
-│   │   ├── main.tsx                  # ReactDOM bootstrap
-│   │   ├── index.css                 # Design tokens, animations, motion-respect
-│   │   ├── components/
-│   │   │   ├── Authscreen.tsx        # /login
-│   │   │   ├── Signup.tsx            # /signup
-│   │   │   ├── ForgotPassword.tsx    # /forgot-password
-│   │   │   ├── Footer.tsx            # Sitewide footer
-│   │   │   ├── Preloader.tsx         # First-paint shield animation
-│   │   │   ├── DecryptedText.tsx     # Scramble-text effect
-│   │   │   ├── InViewLottie.tsx      # IntersectionObserver-aware Lottie
-│   │   │   ├── LottieView.tsx        # Single source of lottie-react interop
-│   │   │   ├── FileDropzone.tsx      # Drag and drop file upload
-│   │   │   ├── ErrorBoundary.tsx     # React error boundary
-│   │   │   └── Skeleton.tsx          # Loading skeleton
-│   │   ├── contexts/
-│   │   │   ├── ThemeContext.tsx      # Auto / Light / Dark cycle
-│   │   │   └── ToastContext.tsx      # Toast notification system
-│   │   ├── layouts/
-│   │   │   └── Layout.tsx            # Header, profile menu, mobile menu, auto-logout
-│   │   ├── pages/
-│   │   │   ├── Landing.tsx           # /
-│   │   │   ├── Home.tsx              # /app  (create flow)
-│   │   │   ├── Success.tsx           # /s/:id  (links + QR)
-│   │   │   ├── ViewSecret.tsx        # /v/:id  (decrypt flow)
-│   │   │   ├── AdminDashboard.tsx    # /admin/:id
-│   │   │   ├── SuperAdmin.tsx        # /super-admin
-│   │   │   ├── PrivacyPolicy.tsx     # /privacy
-│   │   │   ├── AccountSettings.tsx   # /account
-│   │   │   ├── UsageHistory.tsx      # /history
-│   │   │   ├── SecuritySettings.tsx  # /security
-│   │   │   ├── SessionTimeout.tsx    # /security/timeout
-│   │   │   ├── DeviceSessions.tsx    # /security/sessions
-│   │   │   ├── DestroyVault.tsx      # /security/destroy
-│   │   │   ├── TwoFactorSetup.tsx    # /security/2fa
-│   │   │   └── BiometricSetup.tsx    # /security/biometric
-│   │   ├── utils/
-│   │   │   ├── crypto.ts             # AES-GCM, PBKDF2, bucket padding
-│   │   │   ├── csv.ts                # RFC 4180 CSV builder + download
-│   │   │   ├── constants.ts          # DAILY_SECRET_LIMIT, AUTH_ROUTES, etc.
-│   │   │   ├── firebase.ts           # initializeApp + env validation
-│   │   │   ├── passwordStrength.ts   # Lightweight strength estimator
-│   │   │   ├── sessionTimeout.ts     # localStorage-backed inactivity preference
-│   │   │   └── api.ts                # API client utilities
-│   │   └── assets/lotties/           # JSON shield animations
-│   ├── .env.example                  # Copy to .env.local for development
-│   ├── package.json
-│   ├── vite.config.ts                # PWA, code splitting
-│   └── vercel.json                   # SPA fallback rewrite
-├── render.yaml                       # One-click backend deploy on Render
-├── FEATURES.md                       # Roadmap
-├── .gitignore
-└── README.md
+â”œâ”€â”€ backend/                          # Go 1.22 API
+â”‚   â”œâ”€â”€ cmd/
+â”‚   â”‚   â””â”€â”€ api/main.go               # Entry point; reads $PORT
+â”‚   â”œâ”€â”€ internal/
+â”‚   â”‚   â”œâ”€â”€ api/handlers.go           # CORS, CSP, routes, rate limit
+â”‚   â”‚   â”œâ”€â”€ config/                   # Configuration management
+â”‚   â”‚   â”œâ”€â”€ models/                   # Request/response DTOs
+â”‚   â”‚   â””â”€â”€ store/                    # SQLite storage, GC, rate limiter, tests
+â”‚   â”œâ”€â”€ go.mod
+â”‚   â”œâ”€â”€ go.sum
+â”‚   â””â”€â”€ Dockerfile                    # Multi-stage, distroless, non-root
+â”œâ”€â”€ frontend/                         # React 19 + Vite + TypeScript
+â”‚   â”œâ”€â”€ public/                       # PWA assets
+â”‚   â”œâ”€â”€ src/
+â”‚   â”‚   â”œâ”€â”€ App.tsx                   # Routes + Preloader gate
+â”‚   â”‚   â”œâ”€â”€ main.tsx                  # ReactDOM bootstrap
+â”‚   â”‚   â”œâ”€â”€ index.css                 # Design tokens, animations, motion-respect
+â”‚   â”‚   â”œâ”€â”€ components/
+â”‚   â”‚   â”‚   â”œâ”€â”€ Authscreen.tsx        # /login
+â”‚   â”‚   â”‚   â”œâ”€â”€ Signup.tsx            # /signup
+â”‚   â”‚   â”‚   â”œâ”€â”€ ForgotPassword.tsx    # /forgot-password
+â”‚   â”‚   â”‚   â”œâ”€â”€ Footer.tsx            # Sitewide footer
+â”‚   â”‚   â”‚   â”œâ”€â”€ Preloader.tsx         # First-paint shield animation
+â”‚   â”‚   â”‚   â”œâ”€â”€ DecryptedText.tsx     # Scramble-text effect
+â”‚   â”‚   â”‚   â”œâ”€â”€ InViewLottie.tsx      # IntersectionObserver-aware Lottie
+â”‚   â”‚   â”‚   â”œâ”€â”€ LottieView.tsx        # Single source of lottie-react interop
+â”‚   â”‚   â”‚   â”œâ”€â”€ FileDropzone.tsx      # Drag and drop file upload
+â”‚   â”‚   â”‚   â”œâ”€â”€ ErrorBoundary.tsx     # React error boundary
+â”‚   â”‚   â”‚   â””â”€â”€ Skeleton.tsx          # Loading skeleton
+â”‚   â”‚   â”œâ”€â”€ contexts/
+â”‚   â”‚   â”‚   â”œâ”€â”€ ThemeContext.tsx      # Auto / Light / Dark cycle
+â”‚   â”‚   â”‚   â””â”€â”€ ToastContext.tsx      # Toast notification system
+â”‚   â”‚   â”œâ”€â”€ layouts/
+â”‚   â”‚   â”‚   â””â”€â”€ Layout.tsx            # Header, profile menu, mobile menu, auto-logout
+â”‚   â”‚   â”œâ”€â”€ pages/
+â”‚   â”‚   â”‚   â”œâ”€â”€ Landing.tsx           # /
+â”‚   â”‚   â”‚   â”œâ”€â”€ Home.tsx              # /app  (create flow)
+â”‚   â”‚   â”‚   â”œâ”€â”€ Success.tsx           # /s/:id  (links + QR)
+â”‚   â”‚   â”‚   â”œâ”€â”€ ViewSecret.tsx        # /v/:id  (decrypt flow)
+â”‚   â”‚   â”‚   â”œâ”€â”€ AdminDashboard.tsx    # /admin/:id
+â”‚   â”‚   â”‚   â”œâ”€â”€ SuperAdmin.tsx        # /super-admin
+â”‚   â”‚   â”‚   â”œâ”€â”€ PrivacyPolicy.tsx     # /privacy
+â”‚   â”‚   â”‚   â”œâ”€â”€ AccountSettings.tsx   # /account
+â”‚   â”‚   â”‚   â”œâ”€â”€ UsageHistory.tsx      # /history
+â”‚   â”‚   â”‚   â”œâ”€â”€ SecuritySettings.tsx  # /security
+â”‚   â”‚   â”‚   â”œâ”€â”€ SessionTimeout.tsx    # /security/timeout
+â”‚   â”‚   â”‚   â”œâ”€â”€ DeviceSessions.tsx    # /security/sessions
+â”‚   â”‚   â”‚   â”œâ”€â”€ DestroyVault.tsx      # /security/destroy
+â”‚   â”‚   â”‚   â”œâ”€â”€ TwoFactorSetup.tsx    # /security/2fa
+â”‚   â”‚   â”‚   â””â”€â”€ BiometricSetup.tsx    # /security/biometric
+â”‚   â”‚   â”œâ”€â”€ utils/
+â”‚   â”‚   â”‚   â”œâ”€â”€ crypto.ts             # AES-GCM, PBKDF2, bucket padding
+â”‚   â”‚   â”‚   â”œâ”€â”€ csv.ts                # RFC 4180 CSV builder + download
+â”‚   â”‚   â”‚   â”œâ”€â”€ constants.ts          # DAILY_SECRET_LIMIT, AUTH_ROUTES, etc.
+â”‚   â”‚   â”‚   â”œâ”€â”€ firebase.ts           # initializeApp + env validation
+â”‚   â”‚   â”‚   â”œâ”€â”€ passwordStrength.ts   # Lightweight strength estimator
+â”‚   â”‚   â”‚   â”œâ”€â”€ sessionTimeout.ts     # localStorage-backed inactivity preference
+â”‚   â”‚   â”‚   â””â”€â”€ api.ts                # API client utilities
+â”‚   â”‚   â””â”€â”€ assets/lotties/           # JSON shield animations
+â”‚   â”œâ”€â”€ .env.example                  # Copy to .env.local for development
+â”‚   â”œâ”€â”€ package.json
+â”‚   â”œâ”€â”€ vite.config.ts                # PWA, code splitting
+â”‚   â””â”€â”€ vercel.json                   # SPA fallback rewrite
+â”œâ”€â”€ render.yaml                       # One-click backend deploy on Render
+â”œâ”€â”€ FEATURES.md                       # Roadmap
+â”œâ”€â”€ .gitignore
+â””â”€â”€ README.md
 ```
 
 ---
 
-## Local development
 
-### Prerequisites
-
-| Tool         | Version   |
-|--------------|-----------|
-| Go           | 1.22+     |
-| Node.js      | 20+       |
-| npm          | 10+       |
-| (optional) Docker | 24+ |
-
-### 1. Clone and bootstrap
-
-```bash
-git clone https://github.com/4nur4gmishr4/Null-Secret.git
-cd Null-Secret
-```
-
-### 2. Start the backend
-
-```bash
-cd backend
-go run ./cmd/api
-# 2026/01/01 INFO Starting NULL-SECRET API addr=:8080
-```
-
-The API listens on `:8080`. Health check:
-
-```bash
-curl http://localhost:8080/api/v1/healthz
-# {"status":"OK","storage":"healthy"}
-```
-
-### 3. Start the frontend
-
-```bash
-cd frontend
-cp .env.example .env.local      # Then fill in your Firebase keys
-npm install
-npm run dev
-# VITE ready in 700ms  →  http://localhost:5173
-```
-
-Without Firebase keys, the app boots fine but anonymous sign-in is the
-only path; `/login`, `/signup`, account pages will not work. The core
-secret create/view flow (no account) works without Firebase.
-
-### 4. Run the tests
-
-```bash
-# Backend unit tests
-cd backend
-go test -v ./...
-
-# Frontend type check + production build
-cd ../frontend
-npm run build
-```
-
----
-
-## Production deployment
-
-The reference deployment is **Vercel for the frontend** + **Render for
-the Go backend**. Both have generous free tiers. The architecture works
-on any equivalent pair (Netlify/Fly, Cloudflare Pages/Cloud Run, etc.).
-
-### A. Backend on Render (one-click via `render.yaml`)
-
-1. Push this repo to GitHub.
-2. On Render: **New → Blueprint → Connect this repo**.
-3. Render reads `render.yaml`, provisions a free Web Service, builds
-   the multi-stage Dockerfile, and starts the binary.
-4. Set `ALLOWED_ORIGINS` in the service env to the URL Vercel will
-   give you (you can fill this in after step B and redeploy).
-
-The free plan sleeps after 15 minutes of inactivity. To keep it warm,
-register a free job at **cron-job.org** that hits
-`https://<your-app>.onrender.com/api/v1/healthz` every 10 minutes.
-
-### B. Frontend on Vercel
-
-1. Import the repo on Vercel and set the **Root Directory** to
-   `frontend`.
-2. Add the following Environment Variables (Production scope):
-
-   | Name | Value |
-   |---|---|
-   | `VITE_API_BASE` | `https://<your-render-app>.onrender.com/api/v1` |
-   | `VITE_FIREBASE_API_KEY` | from Firebase console |
-   | `VITE_FIREBASE_AUTH_DOMAIN` | from Firebase console |
-   | `VITE_FIREBASE_PROJECT_ID` | from Firebase console |
-   | `VITE_FIREBASE_STORAGE_BUCKET` | from Firebase console |
-   | `VITE_FIREBASE_MESSAGING_SENDER_ID` | from Firebase console |
-   | `VITE_FIREBASE_APP_ID` | from Firebase console |
-
-3. Click **Deploy**. The included `vercel.json` rewrites every path to
-   `index.html` so React Router works on hard reloads.
-
-### C. Wire CORS
-
-Once Vercel gives you a URL like `https://your-frontend.vercel.app`,
-go back to Render and update `ALLOWED_ORIGINS` to include it
-(comma-separate multiple origins for previews):
-
-```
-ALLOWED_ORIGINS=https://your-frontend.vercel.app,https://your-frontend-git-main-you.vercel.app
-```
-
-Redeploy. Done.
-
-### D. Firebase setup
-
-1. Create a project at <https://console.firebase.google.com>.
-2. **Authentication → Sign-in method**: enable Email/Password, Google.
-3. **Firestore → Create database** in production mode.
-4. Paste these Firestore rules so users can only touch their own docs:
-
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{uid}/{document=**} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-       match /usage/{uid}/{document=**} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-     }
-   }
-   ```
-
-5. **Authentication → Settings → Authorized domains**: add your Vercel
-   domain. Without this, Google sign-in pop-ups will be blocked.
-
-### E. Common deployment gotchas
-
-| Symptom | Fix |
-|---|---|
-| Frontend shows a CORS error | Add the Vercel domain to `ALLOWED_ORIGINS` and redeploy the backend. |
-| 30-50 s delay on the first request | Free Render sleeps. Set up the keep-alive cron at cron-job.org. |
-| `Encryption needs a secure connection` toast | Browser refuses Web Crypto on `http://`. Vercel and Render are HTTPS by default; if self-hosting, terminate TLS at your reverse proxy. |
-| Firebase sign-in popup blocks | Add the production domain in Firebase → Authentication → Settings → Authorized domains. |
-| `PORT must be an integer in 1..65535` | The platform set `$PORT` to a non-numeric value. Don't override it; Render sets it correctly automatically. |
-
----
-
-## Configuration reference
-
-### Backend (Go)
-
-| Variable          | Default                  | Description                                                      |
-|-------------------|--------------------------|------------------------------------------------------------------|
-| `PORT`            | `8080`                   | Port to bind. Render/Heroku/Fly inject this automatically.       |
-| `ALLOWED_ORIGINS` | (none)                   | Comma-separated CORS origins. Required in production.            |
-| `ALLOWED_ORIGIN`  | (none)                   | Legacy single-origin form. Still honoured for backwards compat.  |
-| `ENV`             | (none)                   | Set to `production` to drop the localhost dev-time CORS allowlist. |
-| `TRUST_PROXY`     | (none)                   | Set to `true` behind a reverse proxy so X-Forwarded-For wins for rate limiting. |
-| `VITE_API_BASE`   | `http://localhost:8080`  | Used inside the Content-Security-Policy `connect-src` directive. |
-
-### Frontend (Vite, build-time)
-
-| Variable                            | Required | Description                                  |
-|-------------------------------------|----------|----------------------------------------------|
-| `VITE_API_BASE`                     | yes      | Backend base URL, including `/api/v1`.       |
-| `VITE_FIREBASE_API_KEY`             | prod     | All six Firebase keys are required when built in production mode. The build will throw if any are blank. |
-| `VITE_FIREBASE_AUTH_DOMAIN`         | prod     | |
-| `VITE_FIREBASE_PROJECT_ID`          | prod     | |
-| `VITE_FIREBASE_STORAGE_BUCKET`      | prod     | |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | prod     | |
-| `VITE_FIREBASE_APP_ID`              | prod     | |
-
-In dev mode missing Firebase keys log a warning instead of throwing,
-so you can iterate on the secret-sharing flow without setting up
-Firebase first.
-
----
 
 ## API reference
 
@@ -395,10 +208,10 @@ early or look up its status. **Treat it like a password**; it never
 appears in any other response.
 
 Errors:
-- `400` — empty payload or malformed JSON
-- `413` — payload exceeds 15 MB
-- `429` — rate limit (10 req/min/IP)
-- `503` — server at capacity (refuses to OOM)
+- `400` â€” empty payload or malformed JSON
+- `413` â€” payload exceeds 15 MB
+- `429` â€” rate limit (10 req/min/IP)
+- `503` â€” server at capacity (refuses to OOM)
 
 ### `GET /api/v1/secret/{id}`
 
@@ -417,7 +230,7 @@ Response `200 OK`:
 ```
 
 Errors:
-- `404` — not found, expired, or already burned
+- `404` â€” not found, expired, or already burned
 
 ### `GET /api/v1/secret/{id}/info`
 
@@ -470,7 +283,7 @@ keep-alive cron.
 |---------------------------|-------------------------------------------------------------------|
 | Confidentiality           | AES-256-GCM via `window.crypto.subtle`                            |
 | Integrity / authenticity  | GCM authentication tag (rejects any tampering)                    |
-| Key delivery              | URL fragment (RFC 3986 §3.5: never sent to server)                |
+| Key delivery              | URL fragment (RFC 3986 Â§3.5: never sent to server)                |
 | Optional second factor    | PBKDF2-HMAC-SHA256 with 600,000 iterations                         |
 | Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB / 100 KB buckets     |
 | Transport                 | HSTS preload, X-Content-Type-Options, X-Frame-Options DENY        |
