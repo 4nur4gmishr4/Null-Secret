@@ -13,7 +13,7 @@
     "@tailwindcss/vite": "^4.2.4",
     "@vercel/analytics": "^2.0.1",
     "fflate": "^0.8.2",
-    "firebase": "^12.12.1",
+    "firebase": "^12.17.0",
     "lottie-react": "^2.4.1",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
