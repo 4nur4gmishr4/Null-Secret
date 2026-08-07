@@ -20,15 +20,11 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/healthz
-    disk:
-      name: sqlite-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: DB_PATH
-        value: "/data/nullsecret.db"
+        value: "./nullsecret.db"
       - key: BACKUP_DIR
-        value: "/data"
+        value: "./"
       - key: MASTER_KEY
         generateValue: true
       # Render injects PORT automatically. We read it in cmd/api/main.go.
