@@ -140,7 +140,7 @@ const Landing: React.FC = () => {
       <section className="py-12 md:py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
           <div className="lottie-themed w-full max-w-[450px] md:max-w-[600px] lg:max-w-[700px] aspect-square flex-shrink-0 mx-auto">
-            {privacyfullData && <InViewLottie animationData={privacyfullData} loop={true} />}
+            {privacyfullData ? <InViewLottie animationData={privacyfullData} loop={true} /> : null}
           </div>
           <div className="space-y-4 text-center md:text-left">
             <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
