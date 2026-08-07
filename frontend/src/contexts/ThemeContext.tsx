@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 type ThemeMode = 'light' | 'dark';
@@ -42,7 +42,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const theme = preference === 'system' ? osTheme : preference;
 
-  // Apply theme class to <body> idempotently without clobbering other classes.
   useEffect(() => {
     const body = document.body;
     body.classList.remove('light', 'dark');
@@ -50,11 +49,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       window.localStorage.setItem('theme-preference', preference);
     } catch {
-      // Storage may be unavailable (private mode); preference still applies in-memory.
+      /* ignore */
     }
   }, [theme, preference]);
 
-  // Listen for OS theme changes when preference is 'system'
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {

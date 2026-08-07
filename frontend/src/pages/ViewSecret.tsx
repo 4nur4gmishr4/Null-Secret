@@ -83,7 +83,6 @@ const ViewSecret: React.FC = () => {
           setDecrypted(plaintext);
         }
       } catch {
-        // Plaintext was not JSON (legacy/raw secret); display verbatim.
         setDecrypted(plaintext);
       }
     } catch (err: unknown) {
@@ -94,7 +93,6 @@ const ViewSecret: React.FC = () => {
     }
   };
 
-  // Loading state
   if (loading && !needsPassword) {
     return (
       <div className="max-w-4xl lg:max-w-5xl mx-auto flex flex-col items-center justify-center py-12 md:py-16 space-y-6 slide-up" aria-live="polite">
@@ -108,7 +106,6 @@ const ViewSecret: React.FC = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" role="alert" aria-live="assertive">
@@ -140,7 +137,6 @@ const ViewSecret: React.FC = () => {
     );
   }
 
-  // Decrypted view
   if (decrypted !== null) {
     return (
       <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" aria-live="polite">
@@ -209,7 +205,6 @@ const ViewSecret: React.FC = () => {
     );
   }
 
-  // Password prompt
   if (needsPassword) {
     return (
       <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 slide-up" aria-live="polite">
@@ -245,7 +240,6 @@ const ViewSecret: React.FC = () => {
     );
   }
 
-  // Initial gate
   return (
     <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-6 text-center py-8 md:py-12 slide-up">
       <div className="lottie-themed w-52 h-52 md:w-72 md:h-72 mx-auto mb-4">

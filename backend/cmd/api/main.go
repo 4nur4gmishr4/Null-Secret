@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 package main
 
 import (
@@ -18,14 +18,10 @@ import (
 )
 
 const (
-	defaultPort     = "8080"
-	shutdownTimeout = 15 * time.Second
+	defaultPort	= "8080"
+	shutdownTimeout	= 15 * time.Second
 )
 
-// resolveListenAddr honours the $PORT env var that PaaS providers
-// (Render, Heroku, Fly, Railway, Cloud Run) inject at runtime. Falls
-// back to defaultPort for local development. Rejects malformed input
-// loudly so a typo cannot silently bind to ":0".
 func resolveListenAddr(port string) (string, error) {
 	n, err := strconv.Atoi(port)
 	if err != nil || n <= 0 || n > 65535 {
@@ -57,12 +53,12 @@ func main() {
 	router := a.SetupRoutes()
 
 	srv := &http.Server{
-		Addr:              listenAddr,
-		Handler:           router,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		Addr:			listenAddr,
+		Handler:		router,
+		ReadHeaderTimeout:	10 * time.Second,
+		ReadTimeout:		30 * time.Second,
+		WriteTimeout:		30 * time.Second,
+		IdleTimeout:		60 * time.Second,
 	}
 
 	serverErr := make(chan error, 1)

@@ -155,7 +155,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     });
   }, []);
 
-  // After the close animation finishes, unmount the menu so it does not stay focusable.
   useEffect(() => {
     if (menuPhase !== 'closing') return;
     closeMenuTimerRef.current = window.setTimeout(() => setMenuPhase('closed'), MENU_CLOSE_DURATION_MS);

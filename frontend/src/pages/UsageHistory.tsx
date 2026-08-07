@@ -30,7 +30,6 @@ const UsageHistory: React.FC = () => {
       try {
         const today = new Date().toISOString().split('T')[0];
 
-        // Fetch Daily Quota
         const usageRef = doc(db, 'usage', user.uid, 'daily', today);
         const usageSnap = await getDoc(usageRef);
         if (cancelled) return;
@@ -39,7 +38,6 @@ const UsageHistory: React.FC = () => {
           setDailyCount(typeof data.count === 'number' ? data.count : 0);
         }
 
-        // Fetch History Log
         const q = query(
           collection(db, 'users', user.uid, 'history'),
           orderBy('createdAt', 'desc')
