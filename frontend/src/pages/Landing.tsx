@@ -7,7 +7,7 @@ import InViewLottie from '../components/InViewLottie';
 const Landing: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [privacyfullData, setPrivacyfullData] = useState<any>(null);
+  const [privacyfullData, setPrivacyfullData] = useState<unknown>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
