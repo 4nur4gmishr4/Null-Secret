@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 /**
  * Single source of truth for cross-screen magic numbers.
  * Update here, propagate everywhere.
@@ -21,6 +22,6 @@ export type SessionTimeoutOption = typeof SESSION_TIMEOUT_OPTIONS[number];
 
 /**
  * Approximate height of the sticky header. Used by viewport-fit auth screens.
- * ⚠ Must stay in sync with `--header-h` in index.css.
+ * ! Must stay in sync with `--header-h` in index.css.
  */
 export const HEADER_HEIGHT_PX = 72;

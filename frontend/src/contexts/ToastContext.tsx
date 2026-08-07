@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 /* eslint-disable react-refresh/only-export-components */
 import React, { useState, useCallback, createContext, useContext, useRef, useEffect } from 'react';
 

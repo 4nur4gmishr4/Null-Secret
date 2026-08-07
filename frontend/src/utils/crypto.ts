@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 /**
  * NULL-SECRET Cryptography Utility
  * Implements AES-GCM, PBKDF2 for optional password protection,
@@ -73,7 +74,7 @@ function pad(text: string): string {
   const encoder = new TextEncoder();
 
   // Measure the total size including the JSON envelope overhead:
-  // {"d":"<text>","p":""}  →  overhead ≈ 12 + any JSON-escaping of `text`
+  // {"d":"<text>","p":""}  â†’  overhead â‰ˆ 12 + any JSON-escaping of `text`
   const envelopeBase = encoder.encode(JSON.stringify({ d: text, p: '' })).length;
 
   let targetSize = envelopeBase;

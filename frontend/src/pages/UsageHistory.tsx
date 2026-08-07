@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
@@ -121,7 +122,7 @@ const UsageHistory: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-xs font-bold uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading your history…</div>
+          <div className="text-center py-12 text-xs font-bold uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading your historyâ€¦</div>
         ) : history.length === 0 ? (
           <div className="text-center py-12 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>You have not created any secrets yet. Start with the button below.</div>
         ) : (

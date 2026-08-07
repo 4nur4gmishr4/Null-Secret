@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React from 'react';
 import SecurityPageHeader from '../components/SecurityPageHeader';
 import BackLink from '../components/BackLink';

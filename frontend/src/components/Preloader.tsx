@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import { useState, useCallback, useEffect, useRef } from 'react';
 import LottieView from './LottieView';
 import DecryptedText from './DecryptedText';

@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import {
   DEFAULT_SESSION_TIMEOUT_MINUTES,
   SESSION_TIMEOUT_KEY,

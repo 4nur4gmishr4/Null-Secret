@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
@@ -167,7 +168,7 @@ const DestroyVault: React.FC = () => {
             cursor: phraseMatches && !deleting ? 'pointer' : 'not-allowed',
           }}
         >
-          {deleting ? 'Deleting…' : 'Destroy vault permanently'}
+          {deleting ? 'Deletingâ€¦' : 'Destroy vault permanently'}
         </button>
       </div>
     </div>

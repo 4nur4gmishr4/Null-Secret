@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../utils/api';
 import { useToast } from '../contexts/ToastContext';

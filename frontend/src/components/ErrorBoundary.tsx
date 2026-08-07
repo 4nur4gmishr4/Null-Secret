@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React from 'react';
 
 interface ErrorBoundaryProps {
@@ -55,7 +56,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             className="text-xs max-w-md"
             style={{ color: 'var(--text-secondary)' }}
           >
-            An unexpected error occurred. Your data is safe — the encryption key
+            An unexpected error occurred. Your data is safe â€” the encryption key
             never left your browser. Try reloading the page.
           </p>
           {this.state.error && (

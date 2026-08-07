@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
@@ -89,7 +90,7 @@ const DeviceSessions: React.FC = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2 min-w-0">
                 <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {device.label} · {device.platform}
+                  {device.label} Â· {device.platform}
                 </p>
                 <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
                   Signed in: {device.signedInAt}
@@ -107,7 +108,7 @@ const DeviceSessions: React.FC = () => {
                 className="text-[10px] font-bold uppercase underline whitespace-nowrap"
                 style={{ color: 'var(--text-danger)' }}
               >
-                {signingOut ? 'Signing out…' : 'Sign out'}
+                {signingOut ? 'Signing outâ€¦' : 'Sign out'}
               </button>
             </div>
           </div>

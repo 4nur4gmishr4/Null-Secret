@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 package api
 
 import (
@@ -116,7 +117,7 @@ func newCORS(cfg *config.Config) *corsConfig {
 
 // Middleware enforces CORS for browser-initiated requests. When no Origin header
 // is present (e.g. curl, Postman, server-to-server calls), the request is allowed
-// through — this is the standard CORS model. Non-browser abuse is mitigated by
+// through â€” this is the standard CORS model. Non-browser abuse is mitigated by
 // the per-IP rate limiter, not by CORS.
 func (c *corsConfig) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -285,13 +286,13 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	if req.Expiry <= 0 {
 		req.Expiry = 24
 	}
-	if req.Expiry > 168 { // Max 7 days — matches frontend select options
+	if req.Expiry > 168 { // Max 7 days â€” matches frontend select options
 		req.Expiry = 168
 	}
 	if req.ViewLimit <= 0 {
 		req.ViewLimit = 1
 	}
-	if req.ViewLimit > 10 { // Max 10 views — sensible cap
+	if req.ViewLimit > 10 { // Max 10 views â€” sensible cap
 		req.ViewLimit = 10
 	}
 
