@@ -2,7 +2,7 @@
 
 > [!CAUTION]
 > **PROPRIETARY SOFTWARE — NOT OPEN SOURCE**
-> This repository is public exclusively for portfolio and code-review purposes. You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, or using this code in whole or in part without explicit written permission. See `LICENSE` for details.
+> The Null-Secret application is free to use, but the source code within this repository is strictly proprietary. You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, or re-hosting this code in whole or in part without explicit written permission. See `LICENSE` for details.
 
 [![CI](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/ci.yml/badge.svg)](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/codeql.yml/badge.svg)](https://github.com/4nur4gmishr4/Null-Secret/actions/workflows/codeql.yml)
