@@ -293,7 +293,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-200" style={{ background: 'var(--bg-primary)' }}>
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <header
         className={`sticky top-0 z-[70] transition-all duration-200 ${scrolled ? 'header-scrolled' : ''}`}
         style={{
@@ -596,7 +596,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       )}
 
-      {/* â”€â”€ Main â”€â”€ */}
+      {/* ── Main ── */}
       <main
         className={`flex-grow w-full mx-auto fade-in ${isAuthRoute ? 'p-0' : 'max-w-screen-2xl px-3 md:px-8 py-2 md:py-4'}`}
       >

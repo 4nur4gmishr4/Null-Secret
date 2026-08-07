@@ -24,7 +24,7 @@ const Landing: React.FC = () => {
 
   return (
     <div className="fade-in">
-      {/* â”€â”€ Hero â”€â”€ */}
+      {/* ── Hero ── */}
       <section className="flex flex-col items-center justify-center min-h-[55vh] md:min-h-[65vh] text-center px-4 py-10 md:py-16">
         <div className="space-y-8 max-w-4xl lg:max-w-5xl mx-auto">
           {/* Tagline chip */}
@@ -92,7 +92,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* â”€â”€ How It Works â”€â”€ */}
+      {/* ── How It Works ── */}
       <section className="py-12 md:py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="text-center mb-8 md:mb-12">
           <span className="label">How It Works</span>
@@ -136,7 +136,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* â”€â”€ Trust Section â”€â”€ */}
+      {/* ── Trust Section ── */}
       <section className="py-12 md:py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
           <div className="lottie-themed w-full max-w-[450px] md:max-w-[600px] lg:max-w-[700px] aspect-square flex-shrink-0 mx-auto">
@@ -160,7 +160,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* â”€â”€ CTA â”€â”€ */}
+      {/* ── CTA ── */}
       <section className="py-12 md:py-16 text-center" style={{ borderTop: `1px solid var(--border-default)` }}>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
           {user ? 'Ready to send another secret?' : 'Sign in to start sending private messages'}

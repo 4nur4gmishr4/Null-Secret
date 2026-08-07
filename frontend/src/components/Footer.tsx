@@ -35,7 +35,7 @@ export default function Footer() {
                                 Designed, developed, and managed by Anurag Mishra
                             </p>
                             <p className="text-[11px] mt-2" style={{ color: 'var(--text-tertiary)' }}>
-                                Â© 2026 Null-Secret. All rights reserved.
+                                © 2026 Null-Secret. All rights reserved.
                             </p>
                         </div>
                     </div>

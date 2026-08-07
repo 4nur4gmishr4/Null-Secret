@@ -265,7 +265,7 @@ const Home: React.FC = () => {
             aria-label="Dismiss"
             style={{ border: 'none', background: 'none', color: 'var(--text-danger)', padding: '12px', minWidth: '44px', minHeight: '44px' }}
           >
-            âœ•
+            ✕
           </button>
         </div>
       )}
