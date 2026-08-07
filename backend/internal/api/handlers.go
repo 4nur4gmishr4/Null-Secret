@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 package api
 
 import (
@@ -23,30 +23,28 @@ import (
 )
 
 const (
-	adminKeyHeader = "X-Admin-Key"
-	maxRequestBody = 15 * 1024 * 1024 // 15 MB to account for 10MB files + Base64 overhead
+	adminKeyHeader	= "X-Admin-Key"
+	maxRequestBody	= 15 * 1024 * 1024
 )
 
 type API struct {
-	store         *store.Storage
-	config        *config.Config
-	cors          *corsConfig
-	globalLimiter *rate.Limiter
-	sem           chan struct{}
+	store		*store.Storage
+	config		*config.Config
+	cors		*corsConfig
+	globalLimiter	*rate.Limiter
+	sem		chan struct{}
 }
 
 func NewAPI(s *store.Storage, cfg *config.Config) *API {
 	return &API{
-		store:         s,
-		config:        cfg,
-		cors:          newCORS(cfg),
-		globalLimiter: rate.NewLimiter(100, 100),
-		sem:           make(chan struct{}, 100),
+		store:		s,
+		config:		cfg,
+		cors:		newCORS(cfg),
+		globalLimiter:	rate.NewLimiter(100, 100),
+		sem:		make(chan struct{}, 100),
 	}
 }
 
-// clientIP returns the host portion of r.RemoteAddr, stripping the
-// ephemeral TCP port so the rate limiter keys per-host, not per-connection.
 func clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -63,10 +61,6 @@ func clientIP(r *http.Request) string {
 	return ip.Mask(mask).String()
 }
 
-// adminKeyFrom prefers the X-Admin-Key header (or Authorization: Bearer <k>)
-// and falls back to the legacy ?admin_key= query parameter for backward
-// compatibility. New clients SHOULD send the header to avoid leaking the
-// credential through Referer headers, browser history, and proxy logs.
 func adminKeyFrom(r *http.Request) string {
 	if k := r.Header.Get(adminKeyHeader); k != "" {
 		return k
@@ -78,8 +72,8 @@ func adminKeyFrom(r *http.Request) string {
 }
 
 type corsConfig struct {
-	allowed map[string]struct{}
-	csp     string
+	allowed	map[string]struct{}
+	csp	string
 }
 
 func newCORS(cfg *config.Config) *corsConfig {
@@ -115,10 +109,6 @@ func newCORS(cfg *config.Config) *corsConfig {
 	return &corsConfig{allowed: allowed, csp: csp}
 }
 
-// Middleware enforces CORS for browser-initiated requests. When no Origin header
-// is present (e.g. curl, Postman, server-to-server calls), the request is allowed
-// through â€” this is the standard CORS model. Non-browser abuse is mitigated by
-// the per-IP rate limiter, not by CORS.
 func (c *corsConfig) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -161,8 +151,8 @@ func (api *API) SetupRoutes() *chi.Mux {
 	r.Use(api.RateLimitMiddleware)
 	r.Use(api.ConcurrencyMiddleware)
 
-	r.Get("/health", api.HandleHealth) // New health endpoint
-	r.Get("/api/v1/healthz", api.HandleHealth) // Alias for backward compatibility
+	r.Get("/health", api.HandleHealth)
+	r.Get("/api/v1/healthz", api.HandleHealth)
 	r.Get("/api/v1/admin/telemetry", api.HandleTelemetry)
 	r.Post("/api/v1/secret", api.HandleCreateSecret)
 	r.Get("/api/v1/secret/{id}", api.HandleGetSecret)
@@ -216,12 +206,11 @@ func (api *API) HandleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":  "OK",
-		"storage": "healthy",
+		"status":	"OK",
+		"storage":	"healthy",
 	})
 }
 
-// HandleTelemetry returns detailed runtime metrics. Requires SUPER_ADMIN_KEY.
 func (api *API) HandleTelemetry(w http.ResponseWriter, r *http.Request) {
 	adminKey := adminKeyFrom(r)
 	superKey := api.config.SuperAdminKey
@@ -235,11 +224,11 @@ func (api *API) HandleTelemetry(w http.ResponseWriter, r *http.Request) {
 	stats := api.store.Stats()
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":           "OK",
-		"goroutines":       runtime.NumGoroutine(),
-		"heap_alloc_mb":    float64(m.Alloc) / (1024 * 1024),
-		"active_secrets":   stats.ActiveSecrets,
-		"total_payload_mb": float64(stats.TotalPayloadBytes) / (1024 * 1024),
+		"status":		"OK",
+		"goroutines":		runtime.NumGoroutine(),
+		"heap_alloc_mb":	float64(m.Alloc) / (1024 * 1024),
+		"active_secrets":	stats.ActiveSecrets,
+		"total_payload_mb":	float64(stats.TotalPayloadBytes) / (1024 * 1024),
 	})
 }
 
@@ -279,6 +268,20 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Alias != "" {
+
+		for _, r := range req.Alias {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+				writeError(w, http.StatusBadRequest, "alias can only contain letters, numbers, dashes, and underscores")
+				return
+			}
+		}
+		if len(req.Alias) < 3 || len(req.Alias) > 64 {
+			writeError(w, http.StatusBadRequest, "alias must be between 3 and 64 characters")
+			return
+		}
+	}
+
 	if len(req.Payload) == 0 {
 		writeError(w, http.StatusBadRequest, "payload is required")
 		return
@@ -286,18 +289,22 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	if req.Expiry <= 0 {
 		req.Expiry = 24
 	}
-	if req.Expiry > 168 { // Max 7 days â€” matches frontend select options
+	if req.Expiry > 168 {
 		req.Expiry = 168
 	}
 	if req.ViewLimit <= 0 {
 		req.ViewLimit = 1
 	}
-	if req.ViewLimit > 10 { // Max 10 views â€” sensible cap
+	if req.ViewLimit > 10 {
 		req.ViewLimit = 10
 	}
 
-	id, adminKey, err := api.store.Store(req.Payload, req.Expiry, req.ViewLimit)
+	id, adminKey, err := api.store.Store(req.Payload, req.Expiry, req.ViewLimit, req.Alias, req.UnlockAt)
 	if err != nil {
+		if errors.Is(err, store.ErrAliasTaken) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
 		if errors.Is(err, store.ErrCapacityExceeded) {
 			writeError(w, http.StatusServiceUnavailable, err.Error())
 			return
@@ -368,6 +375,15 @@ func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 
 	secret, err := api.store.RetrieveAndDelete(id)
 	if err != nil {
+		if errors.Is(err, store.ErrLocked) && secret != nil && secret.UnlockAt != nil {
+			slog.Info("Secret is time-locked", "req_id", reqID, "ip", ip, "unlock_at", *secret.UnlockAt)
+			writeJSON(w, http.StatusLocked, models.SecretLockedResponse{
+				Error:		"secret is time-locked",
+				UnlockAt:	*secret.UnlockAt,
+			})
+			return
+		}
+
 		slog.Info("Secret retrieval failed", "req_id", reqID, "ip", ip, "error", err)
 		if errors.Is(err, store.ErrExpired) {
 			writeError(w, http.StatusGone, "secret expired")
@@ -380,9 +396,9 @@ func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Secret successfully retrieved and destroyed", "req_id", reqID, "ip", ip)
 
 	writeJSON(w, http.StatusOK, models.GetSecretResponse{
-		Payload:   secret.Payload,
-		Views:     secret.Views,
-		ViewLimit: secret.ViewLimit,
+		Payload:	secret.Payload,
+		Views:		secret.Views,
+		ViewLimit:	secret.ViewLimit,
 	})
 }
 

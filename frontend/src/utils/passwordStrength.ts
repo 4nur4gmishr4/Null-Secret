@@ -10,7 +10,7 @@
 export type StrengthLabel = 'empty' | 'weak' | 'fair' | 'good' | 'strong' | 'excellent';
 
 export interface PasswordStrength {
-  readonly score: number; // 0-100
+  readonly score: number;
   readonly label: StrengthLabel;
   readonly hints: readonly string[];
 }
@@ -92,19 +92,16 @@ export function estimatePasswordStrength(password: string): PasswordStrength {
   const hints: string[] = [];
   let score = 0;
 
-  // Length contributes the largest share. Each extra character past 4 is worth 4 points up to length 20.
   if (password.length < 8) {
     hints.push('Use at least 8 characters.');
   }
   score += Math.min(80, Math.max(0, password.length - 4) * 4);
 
-  // Character class diversity adds up to 20 points.
   score += (charset.classes - 1) * 5;
   if (!charset.hasUpper) hints.push('Add an uppercase letter.');
   if (!charset.hasDigit) hints.push('Add a number.');
   if (!charset.hasSymbol && password.length < 14) hints.push('Add a symbol or make it longer.');
 
-  // Penalties for predictable patterns.
   if (isCommon(password)) {
     score = Math.min(score, 15);
     hints.push('This is one of the most leaked passwords. Pick something else.');
@@ -118,7 +115,6 @@ export function estimatePasswordStrength(password: string): PasswordStrength {
     hints.push('Avoid keyboard runs like "qwerty" or "1234".');
   }
 
-  // Reward unusually long passphrases even if they are simple.
   if (password.length >= 24 && charset.classes >= 2) {
     score = Math.max(score, 90);
   }
