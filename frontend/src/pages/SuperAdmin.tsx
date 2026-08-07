@@ -76,13 +76,11 @@ const SuperAdmin: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     
-    // Initial fetch - use a ref to avoid calling setState synchronously
     const initialFetch = async () => {
       await fetchStats();
     };
     void initialFetch();
     
-    // Poll every 5 seconds
     const interval = setInterval(fetchStats, 5000);
     return () => clearInterval(interval);
   }, [isAuthenticated, fetchStats]);
