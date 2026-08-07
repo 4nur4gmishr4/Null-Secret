@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React from 'react';
 
 interface ErrorBoundaryProps {
@@ -22,9 +22,27 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+    
+    // Automatically reload the page if a stale asset chunk fails to load after a new deployment
+    if (
+      error.message?.includes('Failed to fetch dynamically imported module') ||
+      error.message?.includes('Importing a module script failed') ||
+      error.message?.includes('Loading chunk')
+    ) {
+      console.warn('[ErrorBoundary] Stale build asset detected. Reloading to fetch latest deployment...');
+      window.location.reload();
+    }
   }
 
   private handleRetry = (): void => {
+    if (
+      this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
+      this.state.error?.message?.includes('Importing a module script failed') ||
+      this.state.error?.message?.includes('Loading chunk')
+    ) {
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: null });
   };
 
