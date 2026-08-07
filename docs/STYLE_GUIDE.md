@@ -1,6 +1,6 @@
 # Style Guide
 
-To maintain a clean, readable, and professional codebase, all contributors must adhere to this style guide. Consistency is critical in a security-focused application.
+To maintain a clean, readable, and professional codebase, all developers must adhere to this style guide. Consistency is critical in a security-focused application.
 
 ---
 
@@ -49,7 +49,7 @@ The frontend is built with React 19, Vite, and strict TypeScript.
 
 ---
 
-## 3. Git & Pull Requests
+## 3. Git Commits
 
 ### Commit Messages
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
