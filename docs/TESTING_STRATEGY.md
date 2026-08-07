@@ -50,7 +50,7 @@ npm run build # Validates TypeScript types
 
 Our GitHub Actions pipeline acts as the final gatekeeper before code is merged into `main`.
 
-1. **Null-Secret CI (`ci.yml`):** Triggers on Push and Pull Request. Runs Go tests, Go vet, ESLint, and the Vite production build.
+1. **Null-Secret CI (`ci.yml`):** Triggers on Push. Runs Go tests, Go vet, ESLint, and the Vite production build.
 2. **CodeQL Security Scan (`codeql.yml`):** Runs static application security testing (SAST) to detect vulnerabilities, leaked secrets, or unsafe JavaScript patterns.
 
 ### Merging Requirements

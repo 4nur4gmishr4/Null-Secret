@@ -25,8 +25,8 @@ This document describes how Null-Secret is built, why it is built this way, and 
 1. **Zero-knowledge by default.** The server must never see plaintext.
 2. **Ephemeral by default.** Storage is secondary; in-memory view counts and TTL are primary.
 3. **No persistent identity tied to secrets.** User accounts exist for quota tracking only; secrets are not owned by a Firebase `uid`.
-4. **Simple enough to audit.** A single reviewer should be able to trace a secret end-to-end in under an hour.
-5. **Self-hostable.** One Go binary and one static bundle, no external services required beyond Firebase for optional auth.
+4. **Simple enough to audit.** A single developer should be able to trace a secret end-to-end in under an hour.
+5. **Deployable.** One Go binary and one static bundle, no external services required beyond Firebase for optional auth.
 
 ---
 
@@ -325,7 +325,7 @@ Radius is forcibly set to `0` globally (`*,*::before,*::after { border-radius: 0
 
 ## Invariants
 
-These properties must hold after every change. Reviewers should reject patches that break them.
+These properties must hold after every change. You must ensure these properties hold.
 
 1. The URL fragment (`#…`) is never serialised to the server.
 2. `crypto.subtle.ConstantTimeCompare` is the only way secrets are compared in Go. No `==`, no `bytes.Equal` on credentials.
