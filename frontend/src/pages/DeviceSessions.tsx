@@ -90,7 +90,7 @@ const DeviceSessions: React.FC = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2 min-w-0">
                 <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {device.label} Â· {device.platform}
+                  {device.label} · {device.platform}
                 </p>
                 <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
                   Signed in: {device.signedInAt}
