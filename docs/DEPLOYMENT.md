@@ -38,7 +38,7 @@ This document describes how to deploy Null-Secret to production, staging, and se
 | `PORT` | injected by PaaS | `10000` | Render/Heroku/Fly inject this automatically |
 | `ENV` | yes | `production` | Enables strict CORS and triggers production-only warnings |
 | `ALLOWED_ORIGINS` | yes | `https://app.example.com,https://example.com` | Comma-separated CORS allow-list |
-| `VITE_API_BASE` | yes | `https://api.example.com` | Used in the `connect-src` CSP directive |
+| `VITE_API_BASE` | yes | `https://<your-render-app>.onrender.com` | Used in the `connect-src` CSP directive |
 | `TRUST_PROXY` | yes if behind a proxy | `true` | Honours `X-Forwarded-For` for accurate per-IP rate limiting |
 | `SUPER_ADMIN_KEY` | yes | long random string | Gate for `/api/v1/admin/*` endpoints. **Rotate when leaked.** |
 | `MASTER_KEY` | **strongly recommended** | 64-char hex string | 32-byte server-side encryption key. See [below](#generating-the-master-key) |
@@ -49,7 +49,7 @@ This document describes how to deploy Null-Secret to production, staging, and se
 
 | Variable | Required | Example |
 |---|---|---|
-| `VITE_API_BASE` | yes | `https://api.example.com/api/v1` |
+| `VITE_API_BASE` | yes | `https://<your-render-app>.onrender.com/api/v1` |
 | `VITE_FIREBASE_API_KEY` | yes | see Firebase console |
 | `VITE_FIREBASE_AUTH_DOMAIN` | yes | `<project-id>.firebaseapp.com` |
 | `VITE_FIREBASE_PROJECT_ID` | yes | `<project-id>` |
@@ -116,7 +116,7 @@ docker run -d \
   -p 8080:8080 \
   -e ENV=production \
   -e ALLOWED_ORIGINS=https://example.com \
-  -e VITE_API_BASE=https://api.example.com \
+  -e VITE_API_BASE=https://<your-render-app>.onrender.com \
   -e TRUST_PROXY=true \
   -e SUPER_ADMIN_KEY="$(openssl rand -hex 32)" \
   -e MASTER_KEY="$(openssl rand -hex 32)" \
@@ -204,7 +204,7 @@ location ~* \.(?:js|css|woff2?|ttf|png|svg|webp|json)$ {
    ENV=production
    PORT=8080
    ALLOWED_ORIGINS=https://example.com
-   VITE_API_BASE=https://api.example.com
+   VITE_API_BASE=https://<your-render-app>.onrender.com
    TRUST_PROXY=true
    SUPER_ADMIN_KEY=<generated>
    MASTER_KEY=<generated>

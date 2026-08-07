@@ -3,16 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import InViewLottie from '../components/InViewLottie';
-import privacyfullData from '../assets/lotties/privacyfull.json';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [privacyfullData, setPrivacyfullData] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
+    
+    // Lazy load the lottie JSON to reduce initial bundle size
+    import('../assets/lotties/privacyfull.json').then((module) => {
+      setPrivacyfullData(module.default);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -134,7 +140,7 @@ const Landing: React.FC = () => {
       <section className="py-12 md:py-16" style={{ borderTop: `1px solid var(--border-default)` }}>
         <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
           <div className="lottie-themed w-full max-w-[450px] md:max-w-[600px] lg:max-w-[700px] aspect-square flex-shrink-0 mx-auto">
-            <InViewLottie animationData={privacyfullData} loop={true} />
+            {privacyfullData && <InViewLottie animationData={privacyfullData} loop={true} />}
           </div>
           <div className="space-y-4 text-center md:text-left">
             <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
