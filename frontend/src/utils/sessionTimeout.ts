@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
+// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import {
   DEFAULT_SESSION_TIMEOUT_MINUTES,
   SESSION_TIMEOUT_KEY,
@@ -23,7 +23,7 @@ export function readSessionTimeoutMinutes(): number {
       if (Number.isFinite(parsed) && parsed > 0) return parsed;
     }
   } catch {
-    // localStorage unavailable (private mode, file:// origin); fall through.
+    /* ignore */
   }
   return DEFAULT_SESSION_TIMEOUT_MINUTES;
 }
@@ -37,6 +37,6 @@ export function writeSessionTimeoutMinutes(value: SessionTimeoutOption): void {
   try {
     window.localStorage.setItem(SESSION_TIMEOUT_KEY, value);
   } catch {
-    // Ignore storage errors so the in-memory path still works.
+    /* ignore */
   }
 }

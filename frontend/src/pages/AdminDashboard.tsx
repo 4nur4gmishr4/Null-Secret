@@ -9,10 +9,6 @@ const AdminDashboard: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  // SECURITY NOTE: The admin key is stored in sessionStorage for UX convenience.
-  // If this page is exposed to XSS, admin keys for all managed secrets in this
-  // session could leak. For higher security, consider backend-issued session
-  // tokens tied to the user's Firebase auth rather than raw admin keys.
   const adminKey = location.hash.replace('#', '');
 
   const [info, setInfo] = useState<{views: number, viewLimit: number, expiresAt: string} | null>(null);

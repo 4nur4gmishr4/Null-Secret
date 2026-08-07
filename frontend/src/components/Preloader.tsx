@@ -17,10 +17,8 @@ export default function Preloader({ onComplete }: PreloaderProps) {
   const removeTimerRef = useRef<number | null>(null);
 
   const handleDecryptionComplete = useCallback(() => {
-    // Wait 500ms after text finishes, then start exit (stairs).
     exitTimerRef.current = window.setTimeout(() => {
       setPhase('exit');
-      // Wait for exit animation to complete before removing from DOM.
       removeTimerRef.current = window.setTimeout(() => {
         setVisible(false);
         onComplete();

@@ -5,7 +5,7 @@
  * and ciphertext padding to mitigate traffic analysis.
  */
 
-const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 minimum for PBKDF2-SHA256
+const PBKDF2_ITERATIONS = 600_000;
 const AES_KEY_LENGTH_BYTES = 32;
 const AES_GCM_IV_LENGTH_BYTES = 12;
 const MIN_PBKDF2_SALT_BYTES = 16;
@@ -73,8 +73,6 @@ function pad(text: string): string {
   const buckets = [1024, 5120, 10240];
   const encoder = new TextEncoder();
 
-  // Measure the total size including the JSON envelope overhead:
-  // {"d":"<text>","p":""}  â†’  overhead â‰ˆ 12 + any JSON-escaping of `text`
   const envelopeBase = encoder.encode(JSON.stringify({ d: text, p: '' })).length;
 
   let targetSize = envelopeBase;
@@ -86,7 +84,6 @@ function pad(text: string): string {
   }
 
   if (targetSize === envelopeBase) {
-    // If it exceeds the largest bucket, pad to the nearest 10KB boundary.
     targetSize = Math.ceil(envelopeBase / 10240) * 10240;
   }
 
