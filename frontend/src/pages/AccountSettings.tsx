@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
@@ -97,7 +98,7 @@ const AccountSettings: React.FC = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-6 slide-up">
-        <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading account…</p>
+        <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>Loading accountâ€¦</p>
       </div>
     );
   }
@@ -132,7 +133,7 @@ const AccountSettings: React.FC = () => {
                 className="btn btn-secondary text-[10px] tracking-widest uppercase mt-3"
                 style={{ padding: '8px 16px' }}
               >
-                {savingName ? 'Saving…' : 'Save name'}
+                {savingName ? 'Savingâ€¦' : 'Save name'}
               </button>
               {nameStatus.kind !== 'idle' && (
                 <p className="text-[11px] mt-2" style={{ color: nameStatus.kind === 'success' ? 'var(--text-success)' : 'var(--text-danger)' }}>
@@ -179,7 +180,7 @@ const AccountSettings: React.FC = () => {
               className="btn btn-secondary text-[10px] tracking-widest uppercase mt-3"
               style={{ padding: '8px 16px' }}
             >
-              {savingEmail ? 'Sending…' : 'Send confirmation'}
+              {savingEmail ? 'Sendingâ€¦' : 'Send confirmation'}
             </button>
             {emailStatus.kind !== 'idle' && (
               <p className="text-[11px] mt-2 leading-relaxed" style={{ color: emailStatus.kind === 'success' ? 'var(--text-success)' : 'var(--text-danger)' }}>

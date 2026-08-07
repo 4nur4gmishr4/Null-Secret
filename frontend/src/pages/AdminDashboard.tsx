@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
@@ -12,7 +13,7 @@ const AdminDashboard: React.FC = () => {
   // If this page is exposed to XSS, admin keys for all managed secrets in this
   // session could leak. For higher security, consider backend-issued session
   // tokens tied to the user's Firebase auth rather than raw admin keys.
-  let adminKey = location.hash.replace('#', '');
+  const adminKey = location.hash.replace('#', '');
 
   const [info, setInfo] = useState<{views: number, viewLimit: number, expiresAt: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +154,7 @@ const AdminDashboard: React.FC = () => {
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
                 <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
-              {burning ? 'Deleting…' : 'Delete now'}
+              {burning ? 'Deletingâ€¦' : 'Delete now'}
             </button>
             <p className="text-[10px] text-center mt-3 uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>
               This cannot be undone.

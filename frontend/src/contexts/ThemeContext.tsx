@@ -1,3 +1,4 @@
+﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 type ThemeMode = 'light' | 'dark';
@@ -24,7 +25,7 @@ interface ThemeContextType {
   theme: ThemeMode;
   /** The user's preference: 'system' follows OS, or a manual override. */
   preference: ThemePreference;
-  /** Cycle through: system → light → dark → system */
+  /** Cycle through: system â†’ light â†’ dark â†’ system */
   cycleTheme: () => void;
 }
 
