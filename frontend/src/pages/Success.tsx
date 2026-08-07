@@ -15,11 +15,8 @@ const Success: React.FC = () => {
   const adminKey = location.state?.adminKey;
   
   React.useEffect(() => {
-    if (adminKey && id) {
-      const keys = JSON.parse(sessionStorage.getItem('nullSecret_adminKeys') || '{}');
-      keys[id] = adminKey;
-      sessionStorage.setItem('nullSecret_adminKeys', JSON.stringify(keys));
-    }
+    // The adminKey is now exclusively passed via the URL hash (#adminKey)
+    // to strictly prevent "Clear text storage of sensitive information" alerts in CodeQL.
   }, [adminKey, id]);
   
   const [copied, setCopied] = useState(false);
@@ -27,7 +24,7 @@ const Success: React.FC = () => {
   const [showQR, setShowQR] = useState(false);
 
   const fullUrl = `${window.location.origin}/v/${id}#${keyStr}`;
-  const adminUrl = adminKey ? `${window.location.origin}/admin/${id}` : '';
+  const adminUrl = adminKey ? `${window.location.origin}/admin/${id}#${adminKey}` : '';
 
   const copyToClipboard = async (
     text: string,

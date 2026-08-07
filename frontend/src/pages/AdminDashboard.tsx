@@ -13,10 +13,6 @@ const AdminDashboard: React.FC = () => {
   // session could leak. For higher security, consider backend-issued session
   // tokens tied to the user's Firebase auth rather than raw admin keys.
   let adminKey = location.hash.replace('#', '');
-  if (!adminKey && id) {
-    const keys = JSON.parse(sessionStorage.getItem('nullSecret_adminKeys') || '{}');
-    adminKey = keys[id] || '';
-  }
 
   const [info, setInfo] = useState<{views: number, viewLimit: number, expiresAt: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
