@@ -25,7 +25,7 @@ interface ThemeContextType {
   theme: ThemeMode;
   /** The user's preference: 'system' follows OS, or a manual override. */
   preference: ThemePreference;
-  /** Cycle through: system â†’ light â†’ dark â†’ system */
+  /** Cycle through: system → light → dark → system */
   cycleTheme: () => void;
 }
 
