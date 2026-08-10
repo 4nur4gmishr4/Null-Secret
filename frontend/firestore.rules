@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-user secret history — strictly owner-only.
+    match /users/{uid}/history/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Daily usage counter. Owner-only, and the count is clamped to the
+    // client's DAILY_SECRET_LIMIT (30) so a compromised or buggy client
+    // cannot inflate its quota. Note request.resource is null on deletes,
+    // so the write branch must allow that explicitly.
+    match /usage/{uid}/daily/{date} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && (request.resource == null
+            || (request.resource.data.count is int
+                && request.resource.data.count >= 1
+                && request.resource.data.count <= 30));
+    }
+
+    // Parent usage doc — only ever deleted (Destroy Vault) or read.
+    match /usage/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
