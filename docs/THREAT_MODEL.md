@@ -28,7 +28,7 @@ The system is divided by several critical trust boundaries:
 - **Attack 1 (Server Compromise):** A nation-state or malicious insider gains full root access to the Go server and dumps the SQLite database.
   - **Mitigation:** The database only contains AES-256-GCM ciphertext. The decryption key is generated on the creator's device and appended to the URL fragment (`#key`). Browsers explicitly strip the URL fragment before sending the HTTP request (RFC 3986 §3.5). The server *never* sees the key, making the ciphertext mathematically useless to the attacker.
 - **Attack 2 (Traffic Analysis):** An attacker intercepts the encrypted payload and uses its exact byte size to infer the contents (e.g., guessing a specific password length).
-  - **Mitigation:** Null-Secret employs **Bucket Padding**. Before encryption, the plaintext is padded to a fixed bucket size (1 KB, 5 KB, or 10 KB; larger payloads pad to the next multiple of 10 KB). Because the padding is encrypted alongside the real content, an attacker cannot differentiate between a 12-character password and a 900-byte private key.
+  - **Mitigation:** Null-Secret employs **Bucket Padding** for text messages. Before encryption, the text is padded to a fixed bucket size (1 KB, 5 KB, or 10 KB; larger text pads to the next multiple of 10 KB). Because the padding is encrypted alongside the real content, an attacker cannot differentiate between a 12-character password and a 900-byte private key. File attachments are **not** padded — their size is already revealed by the encrypted payload.
 
 ### 5. Denial of Service (Crashing or exhausting the system)
 - **Attack:** An attacker uploads massive payloads to exhaust the server's RAM (OOM kill) or disk space.

@@ -49,8 +49,9 @@ and deletes it the moment it expires or hits its view limit.
 - Optional Firebase **sign-in** that adds a 30-secret-per-day cap and a
   history page that lists only IDs and timestamps (never message content).
 
-You can use the whole app **without an account**. Sign-in unlocks a
-quota counter, a history view, and account-level security settings.
+Opening a shared secret does not require an account. Creating a new
+secret requires a free sign-in, which also unlocks a quota counter, a
+history view, and account-level security settings.
 
 ---
 
@@ -95,6 +96,7 @@ quota counter, a history view, and account-level security settings.
 - Decryption key travels in URL fragment (never sent to server per RFC 3986)
 - Server holds only encrypted ciphertext in SQLite database
 - Firestore stores only secret ID and timestamp (never content or keys)
+- Text messages are bucket-padded (1 KB / 5 KB / 10 KB); file attachments are sent at their true size
 
 ---
 
@@ -106,7 +108,7 @@ quota counter, a history view, and account-level security settings.
 | Integrity / authenticity  | GCM authentication tag (rejects any tampering)                    |
 | Key delivery              | URL fragment (RFC 3986 §3.5: never sent to server)                |
 | Optional second factor    | PBKDF2-HMAC-SHA256 with 600,000 iterations                         |
-| Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB buckets     |
+| Traffic-analysis resistance | Text padded to 1 KB / 5 KB / 10 KB buckets (larger: next 10 KB multiple); file attachments sent at true size |
 | Transport                 | HSTS preload, X-Content-Type-Options, X-Frame-Options DENY        |
 | Content security          | Build-time CSP `_headers` file, `connect-src` pinned to the API origin |
 | Rate limiting             | 100 req/sec global, per-IP limits                                 |
@@ -129,7 +131,7 @@ See the in-app `/privacy` page for the full plain-language story.
 | Page / Route                 | What it does                                                              | Auth required |
 |------------------------------|---------------------------------------------------------------------------|---------------|
 | `/`                          | Marketing landing page                                                    | no            |
-| `/app`                       | Compose a secret: text + files, expiry, view limit, optional password     | no            |
+| `/app`                       | Compose a secret: text + files, expiry, view limit, optional password     | yes           |
 | `/s/:id#key`                 | Confirmation page with copy-link, QR code, admin link                     | no            |
 | `/v/:id#key`                 | Recipient page: decrypt, optional password prompt, view counter           | no            |
 | `/admin/:id#adminkey`        | Creator dashboard: view count, expiry, burn-now button                    | no            |

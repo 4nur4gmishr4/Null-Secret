@@ -115,7 +115,7 @@ If you are unsure whether an activity is permitted, email us and ask first.
 ## Security Model at a Glance
 
 - **Keys never leave the client.** The AES-256 key lives in the URL fragment (`#…`), which browsers do not transmit to the server by design.
-- **Ciphertext is padded** to bucket sizes (1 KB / 5 KB / 10 KB) before transmission so message length cannot be inferred from request size.
+- **Text messages are padded** to bucket sizes (1 KB / 5 KB / 10 KB, or the next 10 KB multiple) before transmission so message length cannot be inferred from request size. File attachments are sent at their true size, so attachment size remains observable.
 - **Server-side at-rest encryption.** Ciphertext stored in SQLite is re-encrypted with an AES-GCM master key, so a compromised database file alone is not enough to read secrets.
 - **Admin keys are hashed** (`SHA-256`) before storage. All comparison uses `crypto/subtle.ConstantTimeCompare` to block timing attacks.
 - **Super-admin endpoints** require a separate `SUPER_ADMIN_KEY` and perform a constant-time equality check.
@@ -125,7 +125,7 @@ If you are unsure whether an activity is permitted, email us and ask first.
 - **Auto-logout** after client-configured inactivity window.
 - **Firebase Auth** powers identity; the backend never sees user passwords.
 
-For the full architecture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For the full architecture, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ---
 
