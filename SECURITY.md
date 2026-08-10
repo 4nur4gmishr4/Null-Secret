@@ -120,7 +120,7 @@ If you are unsure whether an activity is permitted, email us and ask first.
 - **Admin keys are hashed** (`SHA-256`) before storage. All comparison uses `crypto/subtle.ConstantTimeCompare` to block timing attacks.
 - **Super-admin endpoints** require a separate `SUPER_ADMIN_KEY` and perform a constant-time equality check.
 - **Rate limits**: 20 requests per minute per IP, 100 requests per second globally, and a concurrency semaphore capped at 100 in-flight requests.
-- **Request-body cap**: 1 MB per request via `http.MaxBytesReader`.
+- **Request-body cap**: 15 MB per request via `http.MaxBytesReader` (mirrors the 15 MB storage-layer cap).
 - **Security headers**: CSP (script-src 'self', frame-ancestors 'none'), HSTS with `preload`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
 - **Auto-logout** after client-configured inactivity window.
 - **Firebase Auth** powers identity; the backend never sees user passwords.
