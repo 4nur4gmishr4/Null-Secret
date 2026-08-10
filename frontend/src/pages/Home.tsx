@@ -61,6 +61,56 @@ async function encryptFilePayload(
   return bundle(payload, iv, salt);
 }
 
+const UPLOAD_FAILED = 'We could not reach the server. Please try again in a moment.';
+
+function isCreateResponse(v: unknown): v is { id: string; adminKey?: string } {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    typeof (v as { id?: unknown }).id === 'string'
+  );
+}
+
+/**
+ * POST the secret via XMLHttpRequest instead of fetch: fetch exposes no upload
+ * progress events, and the encrypted payload can be tens of MB, so a static
+ * spinner would leave the sender blind to network stall vs. transfer.
+ */
+function postSecret(
+  body: string,
+  onProgress: (percent: number) => void,
+): Promise<{ id: string; adminKey?: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE}/secret`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(UPLOAD_FAILED));
+        return;
+      }
+      try {
+        const parsed: unknown = JSON.parse(xhr.responseText);
+        if (isCreateResponse(parsed)) {
+          resolve(parsed);
+        } else {
+          reject(new Error(UPLOAD_FAILED));
+        }
+      } catch {
+        reject(new Error(UPLOAD_FAILED));
+      }
+    };
+    xhr.onerror = () => reject(new Error(UPLOAD_FAILED));
+    xhr.send(body);
+  });
+}
+
 const Home: React.FC = () => {
   const [text, setText] = useState('');
   const [password, setPassword] = useState('');
@@ -68,6 +118,7 @@ const Home: React.FC = () => {
   const [viewLimit, setViewLimit] = useState('1');
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const navigate = useNavigate();
@@ -202,35 +253,28 @@ const Home: React.FC = () => {
         bundled = bundle(payload, iv, saltStr);
       }
 
-      const resp = await fetch(`${API_BASE}/secret`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({
+      setUploadProgress(0);
+      const data = await postSecret(
+        JSON.stringify({
           payload: bundled,
           expiry: parseInt(expiry),
           viewLimit: parseInt(viewLimit)
-        })
-      });
+        }),
+        setUploadProgress,
+      );
+      setUploadProgress(null);
 
-      if (!resp.ok) throw new Error('We could not reach the server. Please try again in a moment.');
-
-      const data = await resp.json();
-      if (data.id) {
-        if (user) {
-          try {
-            await addDoc(collection(db, 'users', user.uid, 'history'), {
-              id: data.id,
-              createdAt: serverTimestamp()
-            });
-          } catch (e) {
-            console.error('History log failed', e);
-          }
+      if (user) {
+        try {
+          await addDoc(collection(db, 'users', user.uid, 'history'), {
+            id: data.id,
+            createdAt: serverTimestamp()
+          });
+        } catch (e) {
+          console.error('History log failed', e);
         }
-        navigate(`/s/${data.id}#${keyStr}`, { state: { adminKey: data.adminKey } });
       }
+      navigate(`/s/${data.id}#${keyStr}`, { state: { adminKey: data.adminKey } });
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : '';
@@ -246,6 +290,7 @@ const Home: React.FC = () => {
         setError(message || 'Something went wrong. Please try again.');
       }
     } finally {
+      setUploadProgress(null);
       setLoading(false);
     }
   };
@@ -257,8 +302,25 @@ const Home: React.FC = () => {
           <LottieView animationData={shieldMorphData} loop={true} />
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase animate-pulse" style={{ color: 'var(--text-tertiary)' }}>
-          Locking your message...
+          {uploadProgress !== null ? 'Uploading your locked message...' : 'Locking your message...'}
         </p>
+        {uploadProgress !== null && (
+          <div className="w-full max-w-xs space-y-2">
+            <div className="h-1.5 w-full overflow-hidden" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+              <div
+                className="h-full"
+                style={{
+                  width: `${uploadProgress}%`,
+                  background: 'var(--text-success)',
+                  transition: 'width 0.2s ease-out',
+                }}
+              />
+            </div>
+            <p className="text-[10px] tracking-widest uppercase text-center" style={{ color: 'var(--text-tertiary)' }}>
+              {uploadProgress}%
+            </p>
+          </div>
+        )}
       </div>
     );
   }
