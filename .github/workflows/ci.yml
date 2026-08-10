@@ -1,10 +1,22 @@
 name: Null-Secret CI
 
+# Runs on pushes/PRs against main and is reusable (workflow_call) so the
+# release workflow can run the exact same gate before tagging.
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_call:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same ref so a fast push doesn't queue N
+# identical pipelines; tagged releases are exempted by cancel-in-progress.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -20,7 +32,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
           cache-dependency-path: backend/go.sum
 
       - name: Install backend dependencies
@@ -60,3 +72,52 @@ jobs:
 
       - name: Run TypeScript typecheck and Vite build
         run: npm run build
+
+  # Render deploys this exact image to production, so CI must prove it boots
+  # and serves traffic — a broken Dockerfile would otherwise pass CI and fail
+  # the deploy. Builds the image, boots it, health-checks SQLite, then runs a
+  # create + read round-trip against the real HTTP API.
+  docker-image:
+    name: Deploy artifact verification (Docker image)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the Render deployment image
+        run: docker build -t nullsecret-api:ci ./backend
+
+      - name: Smoke-test the image (health + secret round-trip)
+        run: |
+          docker run -d --name nullsecret-smoke \
+            -p 127.0.0.1:8080:8080 \
+            -e PORT=8080 \
+            -e ENV=development \
+            -e DB_PATH=/tmp/nullsecret.db \
+            -e BACKUP_DIR=/tmp \
+            nullsecret-api:ci
+
+          # Wait up to 30 s for readiness — /health pings SQLite.
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/health
+
+          # Round-trip: create a secret, then read it back. The Payload field is
+          # []byte, so Go's JSON decoder base64-decodes it (c21va2UtdGVzdA== is
+          # the base64 of "smoke-test") and re-encodes on response — decode the
+          # response payload back before comparing.
+          ID=$(curl -fsS -X POST http://127.0.0.1:8080/api/v1/secret \
+            -H 'Content-Type: application/json' \
+            -d '{"payload":"c21va2UtdGVzdA==","expiry":1,"viewLimit":1}' \
+            | jq -r '.id')
+          test -n "$ID"
+          curl -fsS "http://127.0.0.1:8080/api/v1/secret/$ID" \
+            | jq -e '.payload | @base64d == "smoke-test"'
+
+      - name: Clean up container
+        if: always()
+        run: docker rm -f nullsecret-smoke

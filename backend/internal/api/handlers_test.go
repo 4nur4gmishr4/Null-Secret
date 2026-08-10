@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"null-secret/internal/config"
@@ -53,9 +54,9 @@ func TestHandleCreateSecret(t *testing.T) {
 	a := NewAPI(s, cfg)
 
 	payload := models.CreateSecretRequest{
-		Payload:	[]byte("super_secret_payload"),
-		Expiry:		1,
-		ViewLimit:	1,
+		Payload:   []byte("super_secret_payload"),
+		Expiry:    1,
+		ViewLimit: 1,
 	}
 	body, _ := json.Marshal(payload)
 
@@ -128,9 +129,9 @@ func TestHandleCreateSecret_CapsExpiry(t *testing.T) {
 	a := NewAPI(s, cfg)
 
 	payload := models.CreateSecretRequest{
-		Payload:	[]byte("test"),
-		Expiry:		9999,
-		ViewLimit:	100,
+		Payload:   []byte("test"),
+		Expiry:    9999,
+		ViewLimit: 100,
 	}
 	body, _ := json.Marshal(payload)
 
@@ -235,6 +236,42 @@ func TestHandlePurgeAll_Authorized(t *testing.T) {
 	}
 	if count, ok := resp["count"].(float64); !ok || count != 1 {
 		t.Errorf("expected purge count 1, got %v", resp["count"])
+	}
+}
+
+// TestSecurityHeaders exercises the full middleware chain (SetupRoutes) and
+// locks in the defense-in-depth header set every response must carry. The
+// Permissions-Policy is asserted exactly so a future change to the browser
+// permission surface requires a deliberate, reviewed edit.
+func TestSecurityHeaders(t *testing.T) {
+	cfg := &config.Config{}
+	s := setupTestStorage(t)
+	defer s.Close()
+	a := NewAPI(s, cfg)
+	r := a.SetupRoutes()
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 from /health, got %d", rr.Code)
+	}
+
+	exact := map[string]string{
+		"Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+		"X-Content-Type-Options":    "nosniff",
+		"X-Frame-Options":           "DENY",
+		"Referrer-Policy":           "strict-origin-when-cross-origin",
+		"Permissions-Policy":        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+	}
+	for header, want := range exact {
+		if got := rr.Header().Get(header); got != want {
+			t.Errorf("header %s = %q, want %q", header, got, want)
+		}
+	}
+	if csp := rr.Header().Get("Content-Security-Policy"); !strings.HasPrefix(csp, "default-src 'self'") {
+		t.Errorf("Content-Security-Policy = %q, want prefix \"default-src 'self'\"", csp)
 	}
 }
 

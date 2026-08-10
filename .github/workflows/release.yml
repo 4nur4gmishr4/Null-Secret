@@ -1,0 +1,76 @@
+name: Release
+
+# Create a tagged release with:
+#   git tag v0.1.0 && git push origin v0.1.0
+# The full CI gate runs first; on green it builds cross-platform binaries and
+# the frontend bundle, then drafts a GitHub Release (never auto-publishes).
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Run full CI gate
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build release artifacts
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: backend/go.sum
+
+      - name: Build Linux binaries
+        working-directory: backend
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o nullsecret-api-linux-amd64 ./cmd/api
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o nullsecret-api-linux-arm64 ./cmd/api
+
+      - name: Build macOS binaries
+        working-directory: backend
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o nullsecret-api-darwin-amd64 ./cmd/api
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o nullsecret-api-darwin-arm64 ./cmd/api
+
+      - name: Build Windows binary
+        working-directory: backend
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o nullsecret-api-windows-amd64.exe ./cmd/api
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend bundle
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nullsecret-release
+          path: |
+            backend/nullsecret-api-*
+            frontend/dist
+
+      - name: Draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            backend/nullsecret-api-*
+          generate_release_notes: true
+          draft: true

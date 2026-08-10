@@ -20,6 +20,8 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
     if (e.target.files) {
       onFilesAdded(Array.from(e.target.files));
     }
+    // Reset so picking the same file again (after removing it) re-triggers change.
+    e.target.value = '';
   };
 
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -50,7 +52,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
 
   return (
     <div className="space-y-2">
-      <label htmlFor="file-upload" className="label block">Attach files (up to 6 MB combined)</label>
+      <label htmlFor="file-upload" className="label block">Attach files (up to 10 MB combined)</label>
       <div
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -66,6 +68,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
           id="file-upload"
           type="file"
           multiple
+          accept="*/*"
           onChange={handleFileChange}
           className="w-full text-xs font-medium focus:outline-none cursor-pointer"
           style={{ background: 'transparent', border: 'none' }}

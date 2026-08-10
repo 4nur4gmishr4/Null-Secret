@@ -1,0 +1,24 @@
+name: Dependency Review
+
+# Blocks PRs whose dependency changes introduce a high-severity known
+# vulnerability. Complements Dependabot, which opens the PR but cannot
+# evaluate the blast radius of the proposed update.
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Review dependencies
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

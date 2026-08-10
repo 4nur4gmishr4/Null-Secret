@@ -1,7 +1,12 @@
 ﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import { useNavigate } from 'react-router-dom';
+import type { User } from 'firebase/auth';
 
-export default function Footer() {
+interface FooterProps {
+  user: User | null;
+}
+
+export default function Footer({ user }: FooterProps) {
     const navigate = useNavigate();
 
     return (
@@ -47,8 +52,14 @@ export default function Footer() {
                             <li><button onClick={() => navigate('/app')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Create Secret</button></li>
                             <li><button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>How It Works</button></li>
                             <li><button onClick={() => navigate('/privacy')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Privacy</button></li>
-                            <li><button onClick={() => navigate('/login')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Sign In</button></li>
-                            <li><button onClick={() => navigate('/signup')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Create Account</button></li>
+                            {user ? (
+                              <li><button onClick={() => navigate('/account')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>My Account</button></li>
+                            ) : (
+                              <>
+                                <li><button onClick={() => navigate('/login')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Sign In</button></li>
+                                <li><button onClick={() => navigate('/signup')} className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>Create Account</button></li>
+                              </>
+                            )}
                         </ul>
                     </div>
 

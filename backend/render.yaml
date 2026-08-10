@@ -1,0 +1,48 @@
+# Render blueprint (render.com) for the Null-Secret API.
+#
+# Deploy by pointing a new "Blueprint" at this repository root; Render builds
+# backend/Dockerfile and exposes it on a public URL that maps to $PORT.
+#
+# SQLite is a single-file database, so it MUST live on a persistent disk —
+# container filesystems are wiped on every deploy/restart. Render mounts the
+# disk at /data and (by default) chowns it to the container's runtime user
+# (distroless "nonroot", uid 65532), so the nonroot binary can create
+# nullsecret.db and write VACUUM INTO backups. If the mount is root-owned in
+# your environment, add `chown -R 65532:65532 /data` to the Dockerfile.
+#
+# Secrets marked `sync: false` are prompted for once in the Render dashboard
+# and never stored in this file. MASTER_KEY is the only thing that keeps
+# stored secrets recoverable across restarts — set it once and keep it stable.
+
+services:
+  - type: web
+    name: nullsecret-api
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: nullsecret-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DB_PATH
+        value: /data/nullsecret.db
+      - key: BACKUP_DIR
+        value: /data
+      - key: TRUST_PROXY
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: VITE_API_BASE
+        sync: false
+      - key: MASTER_KEY
+        sync: false
+      - key: SUPER_ADMIN_KEY
+        sync: false

@@ -5,8 +5,8 @@ import { useToast } from '../contexts/ToastContext';
 import Skeleton from '../components/Skeleton';
 
 const SuperAdmin: React.FC = () => {
-  const [adminKey, setAdminKey] = useState(sessionStorage.getItem('nullSecret_superKey') || '');
-  const [isAuthenticated, setIsAuthenticated] = useState(!!adminKey);
+  const [adminKey, setAdminKey] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   
   const [stats, setStats] = useState<{
@@ -41,7 +41,6 @@ const SuperAdmin: React.FC = () => {
         throw new Error('Invalid Super Admin Password');
       }
       
-      sessionStorage.setItem('nullSecret_superKey', keyInput.trim());
       setAdminKey(keyInput.trim());
       setIsAuthenticated(true);
       toast('Login successful. Fetching telemetry...', 'success');
@@ -53,7 +52,6 @@ const SuperAdmin: React.FC = () => {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('nullSecret_superKey');
     setAdminKey('');
     setIsAuthenticated(false);
     setStats(null);
