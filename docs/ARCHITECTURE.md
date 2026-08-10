@@ -164,6 +164,7 @@ CREATE TABLE IF NOT EXISTS secrets (
     data        BLOB,                    -- "v1:" || AES-GCM ciphertext
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at  DATETIME,
+    unlock_at   DATETIME,                -- optional time-lock (returns 423 until this time)
     view_limit  INTEGER,
     views       INTEGER DEFAULT 0
 );
