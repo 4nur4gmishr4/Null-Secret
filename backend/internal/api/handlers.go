@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -23,25 +24,25 @@ import (
 )
 
 const (
-	adminKeyHeader	= "X-Admin-Key"
-	maxRequestBody	= 15 * 1024 * 1024
+	adminKeyHeader = "X-Admin-Key"
+	maxRequestBody = 15 * 1024 * 1024
 )
 
 type API struct {
-	store		*store.Storage
-	config		*config.Config
-	cors		*corsConfig
-	globalLimiter	*rate.Limiter
-	sem		chan struct{}
+	store         *store.Storage
+	config        *config.Config
+	cors          *corsConfig
+	globalLimiter *rate.Limiter
+	sem           chan struct{}
 }
 
 func NewAPI(s *store.Storage, cfg *config.Config) *API {
 	return &API{
-		store:		s,
-		config:		cfg,
-		cors:		newCORS(cfg),
-		globalLimiter:	rate.NewLimiter(100, 100),
-		sem:		make(chan struct{}, 100),
+		store:         s,
+		config:        cfg,
+		cors:          newCORS(cfg),
+		globalLimiter: rate.NewLimiter(100, 100),
+		sem:           make(chan struct{}, 100),
 	}
 }
 
@@ -61,6 +62,9 @@ func clientIP(r *http.Request) string {
 	return ip.Mask(mask).String()
 }
 
+// adminKeyFrom resolves the admin key from headers only. Query parameters are
+// deliberately ignored: URLs (and therefore query strings) end up in proxies,
+// browser history, and request logs, so a key passed there would leak.
 func adminKeyFrom(r *http.Request) string {
 	if k := r.Header.Get(adminKeyHeader); k != "" {
 		return k
@@ -68,12 +72,57 @@ func adminKeyFrom(r *http.Request) string {
 	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")
 	}
-	return r.URL.Query().Get("admin_key")
+	return ""
+}
+
+// redactingLogFormatter emits one structured log line per request via slog
+// without writing the client IP or the full URI. Query strings are excluded
+// so that any credentials passed as query parameters (accidentally or not)
+// never reach stdout or the log pipeline.
+type redactingLogFormatter struct{}
+
+func (redactingLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	return &redactingLogEntry{
+		scheme: scheme,
+		method: r.Method,
+		path:   r.URL.Path,
+		proto:  r.Proto,
+	}
+}
+
+type redactingLogEntry struct {
+	scheme string
+	method string
+	path   string
+	proto  string
+}
+
+func (e *redactingLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, _ any) {
+	slog.Info("request completed",
+		"method", e.method,
+		"path", e.path,
+		"proto", e.proto,
+		"status", status,
+		"bytes", bytes,
+		"elapsed_ms", elapsed.Milliseconds(),
+	)
+}
+
+func (e *redactingLogEntry) Panic(v any, stack []byte) {
+	slog.Error("panic recovered",
+		"method", e.method,
+		"path", e.path,
+		"panic", v,
+	)
 }
 
 type corsConfig struct {
-	allowed	map[string]struct{}
-	csp	string
+	allowed map[string]struct{}
+	csp     string
 }
 
 func newCORS(cfg *config.Config) *corsConfig {
@@ -128,6 +177,10 @@ func (c *corsConfig) Middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		// Null-Secret needs none of the browser permission surface — deny all.
+		// Guards against a compromised page or dependency abusing sensors,
+		// camera/mic, geolocation, or payment APIs.
+		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -144,7 +197,7 @@ func (api *API) SetupRoutes() *chi.Mux {
 	if api.config.TrustProxy {
 		r.Use(middleware.RealIP)
 	}
-	r.Use(middleware.Logger)
+	r.Use(middleware.RequestLogger(redactingLogFormatter{}))
 	r.Use(middleware.Recoverer)
 	r.Use(api.cors.Middleware)
 	r.Use(api.GlobalRateLimitMiddleware)
@@ -196,6 +249,8 @@ func (api *API) RateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// HandleHealth reports storage health and basic capacity stats so operators
+// can monitor how close the store is to the eviction ceiling.
 func (api *API) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	if api.store == nil || api.store.DB() == nil {
 		writeError(w, http.StatusInternalServerError, "Storage not initialized")
@@ -205,9 +260,12 @@ func (api *API) HandleHealth(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "Database unreachable")
 		return
 	}
+	stats := api.store.Stats()
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":	"OK",
-		"storage":	"healthy",
+		"status":         "OK",
+		"storage":        "healthy",
+		"active_secrets": stats.ActiveSecrets,
+		"capacity":       store.MaxSecrets(),
 	})
 }
 
@@ -224,11 +282,11 @@ func (api *API) HandleTelemetry(w http.ResponseWriter, r *http.Request) {
 	stats := api.store.Stats()
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":		"OK",
-		"goroutines":		runtime.NumGoroutine(),
-		"heap_alloc_mb":	float64(m.Alloc) / (1024 * 1024),
-		"active_secrets":	stats.ActiveSecrets,
-		"total_payload_mb":	float64(stats.TotalPayloadBytes) / (1024 * 1024),
+		"status":           "OK",
+		"goroutines":       runtime.NumGoroutine(),
+		"heap_alloc_mb":    float64(m.Alloc) / (1024 * 1024),
+		"active_secrets":   stats.ActiveSecrets,
+		"total_payload_mb": float64(stats.TotalPayloadBytes) / (1024 * 1024),
 	})
 }
 
@@ -270,8 +328,8 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 
 	if req.Alias != "" {
 
-		for _, r := range req.Alias {
-			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+		for _, ch := range req.Alias {
+			if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') {
 				writeError(w, http.StatusBadRequest, "alias can only contain letters, numbers, dashes, and underscores")
 				return
 			}
@@ -323,7 +381,6 @@ func (api *API) HandleGetSecretInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reqID := middleware.GetReqID(r.Context())
-	ip := clientIP(r)
 
 	adminKey := adminKeyFrom(r)
 	if adminKey == "" {
@@ -332,11 +389,11 @@ func (api *API) HandleGetSecretInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	info, ok := api.store.GetInfo(id, adminKey)
 	if !ok {
-		slog.Warn("Secret info not found or invalid admin key", "req_id", reqID, "ip", ip)
+		slog.Warn("Secret info not found or invalid admin key", "req_id", reqID)
 		writeError(w, http.StatusNotFound, "secret not found or invalid admin key")
 		return
 	}
-	slog.Info("Secret info retrieved", "req_id", reqID, "ip", ip)
+	slog.Info("Secret info retrieved", "req_id", reqID)
 	writeJSON(w, http.StatusOK, info)
 }
 
@@ -347,7 +404,6 @@ func (api *API) HandleBurnSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reqID := middleware.GetReqID(r.Context())
-	ip := clientIP(r)
 
 	adminKey := adminKeyFrom(r)
 	if adminKey == "" {
@@ -355,18 +411,17 @@ func (api *API) HandleBurnSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if api.store.Burn(id, adminKey) {
-		slog.Info("Secret successfully burned by admin", "req_id", reqID, "ip", ip)
+		slog.Info("Secret successfully burned by admin", "req_id", reqID)
 		writeJSON(w, http.StatusOK, map[string]string{"status": "burned"})
 		return
 	}
-	slog.Warn("Failed to burn secret", "req_id", reqID, "ip", ip)
+	slog.Warn("Failed to burn secret", "req_id", reqID)
 	writeError(w, http.StatusNotFound, "secret not found or invalid admin key")
 }
 
 func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	reqID := middleware.GetReqID(r.Context())
-	ip := clientIP(r)
 
 	if id == "" {
 		writeError(w, http.StatusBadRequest, "missing secret id")
@@ -376,15 +431,15 @@ func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	secret, err := api.store.RetrieveAndDelete(id)
 	if err != nil {
 		if errors.Is(err, store.ErrLocked) && secret != nil && secret.UnlockAt != nil {
-			slog.Info("Secret is time-locked", "req_id", reqID, "ip", ip, "unlock_at", *secret.UnlockAt)
+			slog.Info("Secret is time-locked", "req_id", reqID, "unlock_at", *secret.UnlockAt)
 			writeJSON(w, http.StatusLocked, models.SecretLockedResponse{
-				Error:		"secret is time-locked",
-				UnlockAt:	*secret.UnlockAt,
+				Error:    "secret is time-locked",
+				UnlockAt: *secret.UnlockAt,
 			})
 			return
 		}
 
-		slog.Info("Secret retrieval failed", "req_id", reqID, "ip", ip, "error", err)
+		slog.Info("Secret retrieval failed", "req_id", reqID, "error", err)
 		if errors.Is(err, store.ErrExpired) {
 			writeError(w, http.StatusGone, "secret expired")
 		} else {
@@ -393,30 +448,29 @@ func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("Secret successfully retrieved and destroyed", "req_id", reqID, "ip", ip)
+	slog.Info("Secret successfully retrieved and destroyed", "req_id", reqID)
 
 	writeJSON(w, http.StatusOK, models.GetSecretResponse{
-		Payload:	secret.Payload,
-		Views:		secret.Views,
-		ViewLimit:	secret.ViewLimit,
+		Payload:   secret.Payload,
+		Views:     secret.Views,
+		ViewLimit: secret.ViewLimit,
 	})
 }
 
 func (api *API) HandlePurgeAll(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(r.Context())
-	ip := clientIP(r)
 
 	adminKey := adminKeyFrom(r)
 	superKey := api.config.SuperAdminKey
 
 	if adminKey == "" || superKey == "" || subtle.ConstantTimeCompare([]byte(adminKey), []byte(superKey)) != 1 {
-		slog.Warn("Unauthorized purge attempt", "req_id", reqID, "ip", ip)
+		slog.Warn("Unauthorized purge attempt", "req_id", reqID)
 		writeError(w, http.StatusUnauthorized, "invalid or missing admin key")
 		return
 	}
 
 	count := api.store.PurgeAll()
-	slog.Info("All secrets purged by super admin", "req_id", reqID, "ip", ip, "purged_count", count)
+	slog.Info("All secrets purged by super admin", "req_id", reqID, "purged_count", count)
 	writeJSON(w, http.StatusOK, map[string]any{"status": "purged", "count": count})
 }
 
