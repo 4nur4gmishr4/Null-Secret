@@ -61,7 +61,7 @@ quota counter, a history view, and account-level security settings.
 │                                                                     │
 │   ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐    │
 │   │ AES-256-GCM  │  │ PBKDF2-SHA256│  │ Bucket-padded payload  │    │
-│   │ encrypt      │  │ key stretch  │  │ (1K / 5K / 10K / 100K) │    │
+│   │ encrypt      │  │ key stretch  │  │ (1K / 5K / 10K) │    │
 │   └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘    │
 │          └─────────────────┴──────────────────────┘                 │
 │                            │                                        │
@@ -106,9 +106,9 @@ quota counter, a history view, and account-level security settings.
 | Integrity / authenticity  | GCM authentication tag (rejects any tampering)                    |
 | Key delivery              | URL fragment (RFC 3986 §3.5: never sent to server)                |
 | Optional second factor    | PBKDF2-HMAC-SHA256 with 600,000 iterations                         |
-| Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB / 100 KB buckets     |
+| Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB buckets     |
 | Transport                 | HSTS preload, X-Content-Type-Options, X-Frame-Options DENY        |
-| Content security          | Locked-down CSP with `connect-src` whitelist                      |
+| Content security          | Build-time CSP `_headers` file, `connect-src` pinned to the API origin |
 | Rate limiting             | 100 req/sec global, per-IP limits                                 |
 | Storage                   | SQLite database with automatic GC on TTL or view-limit hit        |
 | Account deletion          | `Destroy Vault` deletes Firestore data + Firebase Auth user       |
