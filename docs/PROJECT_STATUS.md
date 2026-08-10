@@ -1,6 +1,6 @@
 # Null-Secret — Project Status Report
 
-**Last updated:** May 3, 2026
+**Last updated:** August 10, 2026
 **Branch:** `main`
 **Overall Score:** **82 / 100** (up from 72 / 100 after the May 3 hardening pass)
 
@@ -29,7 +29,7 @@
 
 ## Executive Summary
 
-Null-Secret is a **zero-knowledge, end-to-end encrypted secret-sharing web app**. Users create a one-time or time-limited link that disappears after being read. The message is locked on the sender's device with AES-256-GCM, the key rides inside the URL fragment (never sent to the server), and the ciphertext is stored only in server memory until the view limit or TTL is hit.
+Null-Secret is a **zero-knowledge, end-to-end encrypted secret-sharing web app**. Users create a one-time or time-limited link that disappears after being read. The message is locked on the sender's device with AES-256-GCM, the key rides inside the URL fragment (never sent to the server), and the ciphertext is stored in SQLite (encrypted at rest with AES-GCM) until the view limit or TTL is hit.
 
 ### Current Status
 
@@ -41,7 +41,7 @@ Null-Secret is a **zero-knowledge, end-to-end encrypted secret-sharing web app**
 | UI consistency | **Good** | Shared `AuthLayout`, `SecurityPageHeader`, `BackLink`, `PasswordInput`, `GoogleSignInButton`, `NoiseBackground` |
 | Backend security | **Hardened** | Constant-time key comparison, SQL-quote escaping, no plaintext fallback |
 | Build | **Green** | `tsc -b` zero errors, `vite build` clean, Go `build` + `test` pass |
-| Tests | **Backend only** | 8 Go tests. Frontend has zero tests (Playwright installed but unused) |
+| Tests | **Backend only** | 8 Go tests. Frontend has no test runner installed; zero test files. |
 | Documentation | **Present** | `README.md`, `USER_GUIDE.md`, `FEATURES.md`, `TermsOfService`, `PrivacyPolicy` |
 
 ---
@@ -54,7 +54,6 @@ golang/
 ├── USER_GUIDE.md          - End-user documentation with table of contents
 ├── FEATURES.md            - Existing + planned feature inventory
 ├── PROJECT_STATUS.md      - This document
-├── render.yaml            - Render.com deployment config
 ├── .gitignore             - Excludes binaries, .db files, .env.*
 │
 ├── backend/               Go 1.25 API server
@@ -195,9 +194,9 @@ golang/
 | Two-Factor Auth (TOTP) | Placeholder page, "Coming soon" |
 | Biometric lock (WebAuthn) | Placeholder page, "Coming soon" |
 | Cross-device session list | Blocked by Firebase Auth web API |
-| Frontend test suite (Vitest / Playwright) | Not started |
+| Frontend test suite (Vitest / Playwright) | Not installed |
 | OpenAPI / Swagger spec | Not started |
-| CI/CD workflows | Not started |
+| CI/CD workflows | **Green** — `ci.yml` runs backend tests + frontend lint + build on every PR |
 | Sentry or similar error monitoring | Not started |
 
 ---
@@ -261,7 +260,7 @@ RequestID → RealIP (if TrustProxy) → Logger → Recoverer
 - Super-admin key check also uses constant-time comparison
 - Content Security Policy with `frame-ancestors 'none'`, `object-src 'none'`, strict `connect-src`
 - `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`
-- Request-body size limit (1 MB) via `http.MaxBytesReader`
+- Request-body size limit (15 MB) via `http.MaxBytesReader`
 - Global and per-IP rate limiters
 - Concurrency cap via semaphore
 - SQL prepared statements throughout storage layer
@@ -359,7 +358,7 @@ Since May 3:
 
 ### P0 — Should be done next
 
-- [ ] **Frontend tests**: at least smoke tests for the auth flow using Playwright (already installed)
+- [ ] **Frontend tests**: install Vitest or Playwright, then add smoke tests for the auth flow
 - [ ] **Bundle splitting**: Landing is 845 KB — extract the `privacyfull` lottie into a dynamic import
 - [ ] **CI workflow**: GitHub Actions that runs `tsc -b`, `vite build`, `go build`, `go test` on every PR
 
@@ -436,7 +435,7 @@ go build -o api.exe .\cmd\api
 
 ## Deployment
 
-- **Backend** → [Render.com](https://render.com) via `render.yaml`. The `PORT` env var is injected by the platform.
+- **Backend** → [Render.com](https://render.com) via a manually configured service using the `backend/Dockerfile`. The `PORT` env var is injected by the platform.
 - **Frontend** → [Vercel](https://vercel.com) via `vercel.json`. The build command is `npm run build` and the output directory is `dist/`.
 
 ### Required secrets in production
@@ -520,7 +519,7 @@ npm run build         # full production build
 npm run dev           # local dev server
 ```
 
-No automated tests exist yet. Playwright is installed in `devDependencies` but no specs are authored.
+No automated tests exist yet. Neither Vitest nor Playwright is installed.
 
 ### Manual smoke-test checklist
 
