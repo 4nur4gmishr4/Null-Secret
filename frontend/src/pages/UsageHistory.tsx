@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SecurityPageHeader from '../components/SecurityPageHeader';
 import { auth, db } from '../utils/firebase';
-import { collection, query, orderBy, getDocs, doc, getDoc, type Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc, limit, type Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { DAILY_SECRET_LIMIT } from '../utils/constants';
 import { buildCsv, downloadCsv } from '../utils/csv';
@@ -28,7 +28,7 @@ const UsageHistory: React.FC = () => {
         return;
       }
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().slice(0, 10);
 
         const usageRef = doc(db, 'usage', user.uid, 'daily', today);
         const usageSnap = await getDoc(usageRef);
@@ -40,7 +40,10 @@ const UsageHistory: React.FC = () => {
 
         const q = query(
           collection(db, 'users', user.uid, 'history'),
-          orderBy('createdAt', 'desc')
+          orderBy('createdAt', 'desc'),
+          // Limit to the 50 most recent items to avoid unbounded reads
+          // on accounts with heavy usage.
+          limit(50)
         );
         const querySnapshot = await getDocs(q);
         if (cancelled) return;
@@ -52,9 +55,10 @@ const UsageHistory: React.FC = () => {
           };
         });
         setHistory(items);
-      } catch (error) {
+      } catch {
+        // Usage-history fetch is best-effort; a Firestore permission or network
+        // error leaves the table empty without surfacing internals.
         if (cancelled) return;
-        console.error("Error fetching usage data:", error);
       } finally {
         if (!cancelled) setLoading(false);
       }
