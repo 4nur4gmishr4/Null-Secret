@@ -603,7 +603,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {children}
       </main>
 
-      {!isAuthRoute && <Footer />}
+      {!isAuthRoute && <Footer user={user} />}
     </div>
   );
 };
