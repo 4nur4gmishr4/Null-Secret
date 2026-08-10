@@ -78,9 +78,10 @@ User types message ─▶ frontend/src/pages/Home.tsx
   └─▶ Response: { id, adminKey }
 
 Final URL the user shares:
-https://null-secret.app/v/{id}#{bundle}
+https://null-secret.app/v/{id}#{key}
                                └── never sent to server ──┘
 ```
+The fragment carries the raw base64-encoded 256-bit AES key (44 characters). The base64 JSON bundle `{ p, i, s? }` is what gets POSTed as `payload` and stored by the server — never the key.
 
 ### Viewing a secret
 
@@ -100,9 +101,10 @@ Recipient opens link ─▶ frontend/src/pages/ViewSecret.tsx
   │
   ├─▶ Response: { payload, views, viewLimit }
   │
-  ├─▶ unbundle(hash)
-  ├─▶ importKey(bundle.key)        (or deriveKeyFromPassword if password-protected)
-  ├─▶ decrypt(payload, iv, key)
+  ├─▶ unbundle(payload)              (server-stored base64 JSON { p, i, s? })
+  ├─▶ importKey(fragmentKey)         (raw base64 AES key from the URL fragment;
+  │                                    or deriveKeyFromPassword if password-protected)
+  ├─▶ decrypt(payload.p, payload.i, key)
   └─▶ unpad() ─▶ display plaintext
 ```
 
@@ -130,7 +132,7 @@ Creator visits /admin/{id} ─▶ frontend/src/pages/AdminDashboard.tsx
 - **Key derivation (password mode):** PBKDF2-SHA256, 600 000 iterations, 16-byte salt (minimum enforced in code), 32-byte derived key.
 - **IV:** 12 bytes, generated per-message via `crypto.getRandomValues`.
 - **Padding:** Envelope `{ d: text, p: padding }` is stringified, then `pad()` grows `p` to reach the nearest bucket size: 1 KB, 5 KB, 10 KB, or the next multiple of 10 KB if the envelope already exceeds 10 KB.
-- **Bundle:** The fragment is a base64-encoded JSON `{ p, i, s? }` where `p` = payload, `i` = IV, `s` = salt (only present in password mode).
+- **Bundle:** The `payload` sent to the server is a base64-encoded JSON envelope `{ p, i, s? }` where `p` = ciphertext, `i` = IV, `s` = salt (only present in password mode). The URL fragment carries the raw base64 AES-256 key, never this envelope.
 
 ### Server side (`backend/internal/store/storage.go`)
 
@@ -188,7 +190,7 @@ Three goroutines spin up in `NewStorage` and tear down on `Close()`:
 ### Capacity controls
 
 - Hard cap of **1000 secrets** per database; when hit, the oldest 10 rows are evicted.
-- Per-payload cap of **1 MB** at the storage layer and **1 MB** at the HTTP request layer (`http.MaxBytesReader`).
+- Per-payload cap of **15 MB** at the storage layer and **15 MB** at the HTTP request layer (`http.MaxBytesReader`).
 
 ---
 
