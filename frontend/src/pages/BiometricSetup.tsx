@@ -36,7 +36,7 @@ const BiometricSetup: React.FC = () => {
               </button>
             </div>
             <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-              <strong>Technical note.</strong> Built on WebAuthn passkeys. Your private key is generated and stored on your device's secure enclave. The server only stores a public key for signature verification.
+              <strong>Technical note.</strong> Biometric sign-in is not yet available. When it ships it will be built on WebAuthn passkeys &mdash; nothing here is live today.
             </p>
           </div>
         </div>
