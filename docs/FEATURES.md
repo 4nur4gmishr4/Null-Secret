@@ -7,8 +7,8 @@ The system already does:
 - Browser-side AES-256-GCM encryption
 - Optional password layer with PBKDF2 (600,000 iterations)
 - One-time, multi-view, or time-limited links
-- File attachments up to 6 MB total (single file inline, multiple files auto-zipped)
-- Self-destructing storage in server RAM only
+- File attachments up to 10 MB total (single file inline, multiple files auto-zipped)
+- Self-destructing SQLite storage with TTL / view-limit deletion (encrypted at rest)
 - Admin links so the creator can see view counts and burn early
 - Email and Google sign-in (Firebase) with daily quota tracking
 - Light, dark, and system theme
@@ -89,7 +89,7 @@ Get an email or a webhook ping when someone opens your secret.
 
 Drop files anywhere on the create page instead of clicking the file input.
 
-> **For engineers.** `react-dropzone`. Keep the existing 6 MB cap. Show file list with remove buttons.
+> **For engineers.** `react-dropzone`. Keep the existing 10 MB cap. Show file list with remove buttons.
 
 ### 2.6 Image and PDF preview before download
 
@@ -253,7 +253,7 @@ For enterprises: an immutable audit log of admin actions.
 
 Run the backend in two regions so a region failure does not break the service.
 
-> **For engineers.** Deploy the Go binary to two Cloud Run regions behind a Global Load Balancer. Note: secrets are RAM-only, so a region's secrets are lost if its instances all die. Document this trade-off.
+> **For engineers.** Deploy the Go binary to two Cloud Run regions behind a Global Load Balancer. Note: secrets live in SQLite (not in-memory), so a region's secrets persist across process restarts but are not replicated across regions.
 
 ### 7.2 Secret replication (optional)
 
@@ -273,12 +273,7 @@ A separate, internal-only dashboard for operators to view shard-level memory pre
 
 These are not features in the user-visible sense; they are the cleanups that the audit caught. Tracked here so they don't get lost.
 
-- Replace the dead `components/Navbar.tsx` or finish wiring it
-- Replace the dead `workers/cryptoWorker.ts` or wire it for large-payload encryption
-- Single-source the daily limit constant (`30`) instead of repeating it in 5 places
-- Move the placeholder `useLocation` import out of `AdminDashboard.tsx`
-- Pick one ellipsis style (`Loading…` Unicode) and apply everywhere
-- Remove em-dashes from copy and apply a consistent action-verb system
+- Remove the last 2 em-dashes from UI copy (`ErrorBoundary.tsx:77`, `ViewSecret.tsx:193`) and standardise on en-dashes or colon-phrase rewrites for a consistent action-verb style
 
 ---
 
