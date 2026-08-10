@@ -106,11 +106,13 @@ jobs:
           done
           curl -fsS http://127.0.0.1:8080/health
 
-          # Round-trip: create a secret, then read it back. Go marshals []byte
-          # as base64, so decode the payload back before comparing.
+          # Round-trip: create a secret, then read it back. The Payload field is
+          # []byte, so Go's JSON decoder base64-decodes it (c21va2UtdGVzdA== is
+          # the base64 of "smoke-test") and re-encodes on response — decode the
+          # response payload back before comparing.
           ID=$(curl -fsS -X POST http://127.0.0.1:8080/api/v1/secret \
             -H 'Content-Type: application/json' \
-            -d '{"payload":"smoke-test","expiry":1,"viewLimit":1}' \
+            -d '{"payload":"c21va2UtdGVzdA==","expiry":1,"viewLimit":1}' \
             | jq -r '.id')
           test -n "$ID"
           curl -fsS "http://127.0.0.1:8080/api/v1/secret/$ID" \
