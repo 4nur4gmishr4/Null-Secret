@@ -11,18 +11,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ### Added
 - Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CRYPTOGRAPHY_SPEC.md`, `docs/THREAT_MODEL.md`, `.github/SUPPORT.md`.
 - `.github/ISSUE_TEMPLATE/` with bug-report and feature-request forms.
+- `.github/workflows/release.yml`: tag-driven (`v*`) release pipeline that re-runs the full CI gate, cross-compiles the backend for Linux/macOS/Windows (amd64+arm64), builds the frontend bundle, and drafts a GitHub Release with auto-generated notes. Never auto-publishes.
+- `.github/workflows/dependency-review.yml`: blocks PRs whose dependency changes introduce high-severity known vulnerabilities.
+- CI now verifies the actual Render deploy artifact: builds `backend/Dockerfile` and smoke-tests the image (health check + create/read round-trip against the live API), so a Dockerfile regression can no longer pass CI and fail production.
 
 ### Removed
 - `docs/PROJECT_STATUS.md`: stale internal status report that duplicated README, CHANGELOG, and PERFORMANCE.md, and contained an outdated self-score (82/100) superseded by the full audit.
 
 ### Changed
+- `.github/workflows/ci.yml`: added least-privilege `permissions`, per-ref `concurrency` (cancels superseded runs), made the workflow reusable via `workflow_call` for the release pipeline, and added the Docker image verification job.
+- `.github/dependabot.yml`: added the `github-actions` ecosystem so workflow action versions stay current.
 - `LICENSE` strengthened with trademark clause, reverse-engineering prohibition, copyright-notice preservation, limitation of liability, and governing law (Republic of India).
 - `README.md`: removed the duplicated "Current Features" bullet list (already in "What It Does"), replaced the License section wording, and fixed a broken Privacy Manifesto self-link.
 - `docs/FEATURES.md`: removed shipped features (session control, auto-logout, account deletion, email change, custom aliases, time-window unlock, drag-and-drop, QR, toasts, CSV export, password strength meter) and the duplicate "already does" list; the document is now the forward-looking roadmap only.
 - `docs/ARCHITECTURE.md`: added the `unlock_at` column to the schema block.
 - `SECURITY.md`: added `Permissions-Policy` to the security headers list.
-
-### Changed
 - `.gitignore` rewritten with sectioned, professional patterns. `.env.example` is now correctly excluded from the ignore list so developers can bootstrap.
 - Footer no longer displays a hard-coded version string; the marketing copy now reads "Built for privacy".
 - `README.md` no longer references a `v1.0.0` version label.
