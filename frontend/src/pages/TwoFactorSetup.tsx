@@ -36,7 +36,7 @@ const TwoFactorSetup: React.FC = () => {
               </button>
             </div>
             <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-              <strong>Technical note.</strong> We use the standard TOTP scheme (RFC 6238) with a 30-second window. Your secret never leaves the server in plain form.
+              <strong>Technical note.</strong> Two-factor authentication is not yet available. When it ships it will use the standard TOTP scheme (RFC 6238) with a 30-second window &mdash; nothing here is live today.
             </p>
           </div>
         </div>
