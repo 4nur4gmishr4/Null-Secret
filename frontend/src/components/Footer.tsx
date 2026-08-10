@@ -83,7 +83,7 @@ export default function Footer({ user }: FooterProps) {
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/4nur4gmishr4/Null-Secret/blob/main/USER_GUIDE.md" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>
+                                <a href="https://github.com/4nur4gmishr4/Null-Secret/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity text-[14px]" style={{ color: 'var(--text-secondary)' }}>
                                     User Guide
                                 </a>
                             </li>
