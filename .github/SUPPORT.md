@@ -19,7 +19,7 @@ Need help with Null-Secret? Pick the channel that matches what you are trying to
 
 ## I found a security vulnerability
 
-**Do not open a public issue.** Follow the private disclosure process in [SECURITY.md](./SECURITY.md).
+**Do not open a public issue.** Follow the private disclosure process in [SECURITY.md](../SECURITY.md).
 
 Send details to [anuragmishrasnag06082004@gmail.com](mailto:anuragmishrasnag06082004@gmail.com) with `[Null-Secret Security]` in the subject line.
 
@@ -41,7 +41,7 @@ If the bug involves data loss or account lockout, mark the issue as `priority/hi
 
 ## I have a feature idea
 
-1. Check [FEATURES.md](./FEATURES.md) to see whether it is already planned.
+1. Check [FEATURES.md](../docs/FEATURES.md) to see whether it is already planned.
 2. Open an issue using the **Feature request** template.
 3. Describe the user benefit first, then any implementation ideas. Small, focused proposals are easier to ship than sweeping rewrites.
 
@@ -51,7 +51,7 @@ For non-trivial changes, open an issue before writing code so the design can be 
 
 ## I have a question about using the app
 
-The [User Guide](./USER_GUIDE.md) covers the main flows: creating a secret, using a password, setting view limits, understanding self-destruction, and managing your account.
+The [User Guide](../docs/USER_GUIDE.md) covers the main flows: creating a secret, using a password, setting view limits, understanding self-destruction, and managing your account.
 
 If it does not answer your question, open a **Discussion** (or a regular issue labelled `question`) on GitHub.
 
@@ -81,7 +81,7 @@ If you no longer have access to the email on the account, there is no manual rec
 
 ## I want to contribute
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, code style, testing expectations, and the pull-request checklist. First-time contributors are welcome.
+Null-Secret is closed-source and we do not accept external pull requests or feature branches. If you have found a bug or have a feature idea, open an issue using the templates above. Security findings follow the [private disclosure process](../SECURITY.md).
 
 ---
 
