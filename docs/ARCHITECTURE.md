@@ -191,7 +191,7 @@ Three goroutines spin up in `NewStorage` and tear down on `Close()`:
 ### Capacity controls
 
 - Hard cap of **1000 secrets** per database; when hit, the oldest 10 rows are evicted.
-- Per-payload cap of **15 MB** at the storage layer and **15 MB** at the HTTP request layer (`http.MaxBytesReader`).
+- Per-payload cap of **48 MB** at the storage layer and **56 MB** at the HTTP request layer (`http.MaxBytesReader`); both are sized so a 30 MB attachment survives the two base64 encodings applied in flight (~1.78x) and in storage (~1.33x).
 
 ---
 

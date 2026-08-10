@@ -36,7 +36,7 @@ Null-Secret is a secure way to share private information that self-destructs aft
 - Passwords
 - API keys
 - Private notes
-- Confidential files (up to 10 MB)
+- Confidential files (up to 30 MB)
 - Any sensitive information you don't want stored permanently
 
 ## How it works
@@ -75,7 +75,7 @@ Your message is encrypted in your browser before it leaves your device. The serv
 Add an extra layer of security by requiring a password to open the secret.
 
 ### File attachments
-Send files up to 10 MB. Multiple files are automatically zipped together.
+Send files up to 30 MB combined. Multiple files are automatically zipped together.
 
 ## Security Explained Simply
 

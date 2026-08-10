@@ -1,5 +1,6 @@
 ﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
 import React, { useCallback } from 'react';
+import { MAX_ATTACHMENT_BYTES } from '../utils/constants';
 
 interface FileDropzoneProps {
   files: File[];
@@ -52,7 +53,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
 
   return (
     <div className="space-y-2">
-      <label htmlFor="file-upload" className="label block">Attach files (up to 10 MB combined)</label>
+      <label htmlFor="file-upload" className="label block">Attach files (up to {MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB combined)</label>
       <div
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}

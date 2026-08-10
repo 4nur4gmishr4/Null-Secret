@@ -118,14 +118,22 @@ function unpad(paddedJson: string): string {
   return parsed.d;
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+/**
+ * Base64-encodes a byte range. Unlike arrayBufferToBase64, this takes a
+ * Uint8Array view so callers can encode a subarray (e.g. the file bytes that
+ * follow a header) without copying the underlying buffer first.
+ */
+export function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += BASE64_CHUNK) {
     const chunk = bytes.subarray(offset, offset + BASE64_CHUNK);
     binary += String.fromCharCode.apply(null, Array.from(chunk));
   }
   return btoa(binary);
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  return bytesToBase64(new Uint8Array(buffer));
 }
 
 function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
@@ -179,6 +187,43 @@ export async function decrypt(payloadStr: string, ivStr: string, key: CryptoKey)
   }
 
   return unpad(new TextDecoder().decode(decrypted));
+}
+
+/**
+ * Encrypts raw bytes (file attachments) without the length-padding step:
+ * file size already leaks through the encrypted payload length, so padding
+ * would only add base64 bulk. The output stays backward-compatible with the
+ * bundle schema — only the plaintext format differs.
+ */
+export async function encryptBytes(data: Uint8Array, key: CryptoKey): Promise<EncryptedPayload> {
+  const iv = window.crypto.getRandomValues(new Uint8Array(AES_GCM_IV_LENGTH_BYTES));
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    data as BufferSource
+  );
+  return {
+    payload: bytesToBase64(new Uint8Array(encrypted)),
+    iv: bytesToBase64(iv),
+  };
+}
+
+export async function decryptBytes(payloadStr: string, ivStr: string, key: CryptoKey): Promise<Uint8Array> {
+  const payload = base64ToUint8Array(payloadStr);
+  const iv = base64ToUint8Array(ivStr);
+  if (iv.byteLength !== AES_GCM_IV_LENGTH_BYTES) {
+    throw new Error(`invalid AES-GCM IV length: ${iv.byteLength}`);
+  }
+  try {
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      payload
+    );
+    return new Uint8Array(decrypted);
+  } catch (cause) {
+    throw new Error('decryption failed: tag mismatch or wrong key', { cause });
+  }
 }
 
 export interface SecretBundle {

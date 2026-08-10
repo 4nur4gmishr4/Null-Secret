@@ -7,6 +7,15 @@
 /** Maximum secrets a single account can create per UTC day. */
 export const DAILY_SECRET_LIMIT = 30;
 
+/**
+ * Maximum combined size of all attached files, in bytes. The recipient flow
+ * stores the files as raw bytes, but transport base64-encodes them (~1.33x) and
+ * the payload bundle base64-encodes again (~1.78x total), so 30MB of files
+ * produces a ~53MB request body — the backend body cap (56MB) and stored-bundle
+ * cap (48MB) are sized to match. Keep all three in sync.
+ */
+export const MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024;
+
 /** Auth routes where the global Footer must be hidden so the form fits in one viewport. */
 export const AUTH_ROUTES: readonly string[] = ['/login', '/signup', '/forgot-password'];
 

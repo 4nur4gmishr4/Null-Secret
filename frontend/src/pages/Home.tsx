@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
 import { FileDropzone } from '../components/FileDropzone';
-import { generateKey, deriveKeyFromPassword, exportKey, encrypt, bundle } from '../utils/crypto';
+import { generateKey, deriveKeyFromPassword, exportKey, encrypt, encryptBytes, bundle } from '../utils/crypto';
 import { auth, db } from '../utils/firebase';
 import {
   doc,
@@ -13,7 +13,7 @@ import {
   addDoc
 } from 'firebase/firestore';
 import { zipSync } from 'fflate';
-import { DAILY_SECRET_LIMIT } from '../utils/constants';
+import { DAILY_SECRET_LIMIT, MAX_ATTACHMENT_BYTES } from '../utils/constants';
 import { estimatePasswordStrength, type StrengthLabel } from '../utils/passwordStrength';
 import { API_BASE } from '../utils/api';
 import shieldMorphData from '../assets/lotties/shield-morph.json';
@@ -36,6 +36,31 @@ const STRENGTH_COLORS: Record<StrengthLabel, string> = {
   excellent: 'var(--text-success)',
 };
 
+/**
+ * File attachment plaintext layout, encrypted as raw bytes (not base64 text).
+ *   [4-byte big-endian header length][UTF-8 header JSON][file bytes]
+ * The 4-byte prefix makes binary payloads self-describing on decrypt: a legacy
+ * string envelope always starts with '{' (0x7B), which parses to a header
+ * length larger than the payload — so ViewSecret can fall back cleanly.
+ */
+const HEADER_LENGTH_BYTES = 4;
+
+async function encryptFilePayload(
+  fileBytes: Uint8Array,
+  header: { text: string; name: string; type: string },
+  key: CryptoKey,
+  salt: string | undefined,
+): Promise<string> {
+  const headerBytes = new TextEncoder().encode(JSON.stringify(header));
+  const combined = new Uint8Array(HEADER_LENGTH_BYTES + headerBytes.length + fileBytes.length);
+  new DataView(combined.buffer).setUint32(0, headerBytes.length, false);
+  combined.set(headerBytes, HEADER_LENGTH_BYTES);
+  combined.set(fileBytes, HEADER_LENGTH_BYTES + headerBytes.length);
+
+  const { payload, iv } = await encryptBytes(combined, key);
+  return bundle(payload, iv, salt);
+}
+
 const Home: React.FC = () => {
   const [text, setText] = useState('');
   const [password, setPassword] = useState('');
@@ -55,8 +80,8 @@ const Home: React.FC = () => {
     // (React may invoke them twice in StrictMode), so setError cannot live inside.
     const allFiles = [...files, ...newFiles];
     const totalSize = allFiles.reduce((acc, f) => acc + f.size, 0);
-    if (totalSize > 10 * 1024 * 1024) {
-      setError('Your files together must be smaller than 10 MB.');
+    if (totalSize > MAX_ATTACHMENT_BYTES) {
+      setError('Your files together must be smaller than 30 MB.');
       return;
     }
     setFiles(allFiles);
@@ -140,45 +165,29 @@ const Home: React.FC = () => {
 
       const keyStr = await exportKey(key);
 
-      let plaintext = text;
-      if (files.length > 0) {
+      let bundled: string;
+      if (files.length === 1) {
+        const file = files[0];
+        if (!file) throw new Error('Attached file is missing');
+        // Read the file once, as raw bytes. The old path base64-encoded it via
+        // readAsDataURL (a second read), then the text encrypt + bundle added two
+        // more base64 layers — inflating an 8MB video to a ~19MB request body that
+        // blew past the server cap. Raw bytes stay at ~1.33x the file size.
+        const fileBytes = new Uint8Array(await file.arrayBuffer());
+        bundled = await encryptFilePayload(fileBytes, { text, name: file.name, type: file.type }, key, saltStr);
+      } else if (files.length > 1) {
         const zipObj: Record<string, Uint8Array> = {};
         for (const f of files) {
           const buffer = await f.arrayBuffer();
           zipObj[f.name] = new Uint8Array(buffer);
         }
-
-        let fileData;
-        if (files.length === 1) {
-          const file = files[0];
-          if (!file) throw new Error('Attached file is missing');
-          const reader = new FileReader();
-          const fileBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          fileData = { name: file.name, type: file.type, data: `data:${file.type || 'application/octet-stream'};base64,${fileBase64}` };
-        } else {
-          const zipped = zipSync(zipObj);
-          const blob = new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/zip' });
-          const reader = new FileReader();
-          const zipBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          fileData = { name: 'secure_attachments.zip', type: 'application/zip', data: `data:application/zip;base64,${zipBase64}` };
-        }
-
-        plaintext = JSON.stringify({
-          text: text,
-          file: fileData
-        });
+        const zipped = zipSync(zipObj);
+        const zippedBytes = new Uint8Array(zipped.buffer, zipped.byteOffset, zipped.byteLength);
+        bundled = await encryptFilePayload(zippedBytes, { text, name: 'secure_attachments.zip', type: 'application/zip' }, key, saltStr);
+      } else {
+        const { payload, iv } = await encrypt(text, key);
+        bundled = bundle(payload, iv, saltStr);
       }
-
-      const { payload, iv } = await encrypt(plaintext, key);
-      const bundled = bundle(payload, iv, saltStr);
 
       const resp = await fetch(`${API_BASE}/secret`, {
         method: 'POST',
