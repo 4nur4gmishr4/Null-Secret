@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ## [Unreleased]
 
 ### Added
-- Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `ARCHITECTURE.md`, `API.md`, `SUPPORT.md`.
+- Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CRYPTOGRAPHY_SPEC.md`, `docs/THREAT_MODEL.md`, `.github/SUPPORT.md`.
 - `.github/ISSUE_TEMPLATE/` with bug-report and feature-request forms.
 
 ### Changed
@@ -115,8 +115,8 @@ Initial feature set shipped:
 
 - Browser-side AES-256-GCM encryption with PBKDF2-SHA256 (600 000 iterations).
 - One-time and time-limited share links.
-- File attachments up to 6 MB (single inline, multiple auto-zipped).
-- Self-destructing in-memory storage with optional SQLite persistence encrypted at rest.
+- File attachments up to 10 MB (single inline, multiple auto-zipped).
+- Self-destructing SQLite storage with TTL / view-limit deletion, encrypted at rest.
 - Admin links for view-count checking and early burning.
 - Firebase email and Google sign-in.
 - Light, dark, and system-preference themes.
