@@ -22,13 +22,13 @@ The system is divided by several critical trust boundaries:
 
 ### 3. Repudiation (Denying an action occurred)
 - **Attack:** A malicious actor spams the system and denies doing so, leading to IP bans for legitimate users.
-- **Mitigation:** The system relies on standard IP-based token bucket rate limiting (100 req/sec global, 10 req/min per IP). In an authenticated context (Firebase), daily quotas are strictly enforced per `uid` via Firestore atomic transactions, providing a non-repudiable audit log of usage counters.
+- **Mitigation:** The system relies on standard IP-based token bucket rate limiting (100 req/sec global, 20 req/min per IP, with IPv6 collapsed to `/64`). In an authenticated context (Firebase), daily quotas are strictly enforced per `uid` via Firestore atomic transactions, providing a non-repudiable audit log of usage counters.
 
 ### 4. Information Disclosure (Exposing private data)
 - **Attack 1 (Server Compromise):** A nation-state or malicious insider gains full root access to the Go server and dumps the SQLite database.
   - **Mitigation:** The database only contains AES-256-GCM ciphertext. The decryption key is generated on the creator's device and appended to the URL fragment (`#key`). Browsers explicitly strip the URL fragment before sending the HTTP request (RFC 3986 §3.5). The server *never* sees the key, making the ciphertext mathematically useless to the attacker.
 - **Attack 2 (Traffic Analysis):** An attacker intercepts the encrypted payload and uses its exact byte size to infer the contents (e.g., guessing a specific password length).
-  - **Mitigation:** Null-Secret employs **Bucket Padding**. Before encryption, the plaintext is padded with random noise to the nearest bucket size (1KB, 5KB, 10KB, or 100KB). An attacker cannot differentiate between a 12-character password and a 900-byte private key.
+  - **Mitigation:** Null-Secret employs **Bucket Padding**. Before encryption, the plaintext is padded to a fixed bucket size (1 KB, 5 KB, or 10 KB; larger payloads pad to the next multiple of 10 KB). Because the padding is encrypted alongside the real content, an attacker cannot differentiate between a 12-character password and a 900-byte private key.
 
 ### 5. Denial of Service (Crashing or exhausting the system)
 - **Attack:** An attacker uploads massive payloads to exhaust the server's RAM (OOM kill) or disk space.
