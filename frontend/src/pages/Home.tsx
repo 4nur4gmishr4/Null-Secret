@@ -81,7 +81,7 @@ const Home: React.FC = () => {
     const allFiles = [...files, ...newFiles];
     const totalSize = allFiles.reduce((acc, f) => acc + f.size, 0);
     if (totalSize > MAX_ATTACHMENT_BYTES) {
-      setError('Your files together must be smaller than 30 MB.');
+      setError(`Your files together must be smaller than ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB.`);
       return;
     }
     setFiles(allFiles);
@@ -176,10 +176,23 @@ const Home: React.FC = () => {
         const fileBytes = new Uint8Array(await file.arrayBuffer());
         bundled = await encryptFilePayload(fileBytes, { text, name: file.name, type: file.type }, key, saltStr);
       } else if (files.length > 1) {
+        // zipSync keys are entry names, so duplicate file names would silently
+        // overwrite each other inside the archive. Dedupe with a numeric suffix.
+        const usedNames = new Set<string>();
         const zipObj: Record<string, Uint8Array> = {};
         for (const f of files) {
           const buffer = await f.arrayBuffer();
-          zipObj[f.name] = new Uint8Array(buffer);
+          let name = f.name;
+          if (usedNames.has(name)) {
+            const dot = name.lastIndexOf('.');
+            const base = dot > 0 ? name.slice(0, dot) : name;
+            const ext = dot > 0 ? name.slice(dot) : '';
+            let i = 1;
+            while (usedNames.has(`${base} (${i})${ext}`)) i += 1;
+            name = `${base} (${i})${ext}`;
+          }
+          usedNames.add(name);
+          zipObj[name] = new Uint8Array(buffer);
         }
         const zipped = zipSync(zipObj);
         const zippedBytes = new Uint8Array(zipped.buffer, zipped.byteOffset, zipped.byteLength);

@@ -1,5 +1,5 @@
 ﻿// Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,6 +18,13 @@ const Success: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const resetTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   const fullUrl = `${window.location.origin}/v/${id}#${keyStr}`;
   const adminUrl = adminKey ? `${window.location.origin}/admin/${id}#${adminKey}` : '';
@@ -31,7 +38,8 @@ const Success: React.FC = () => {
       await navigator.clipboard.writeText(text);
       setter(true);
       toast(`${label} copied to clipboard`, 'success');
-      setTimeout(() => setter(false), 2500);
+      if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = window.setTimeout(() => setter(false), 2500);
     } catch (err) {
       console.error('clipboard write failed', err);
       toast('Could not copy to clipboard', 'error');

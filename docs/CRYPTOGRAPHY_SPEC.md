@@ -21,8 +21,8 @@ When a user creates a secret, the following pipeline executes entirely within th
    *If the user specifies an optional password:* The 32-byte key is instead derived from the password using PBKDF2 (HMAC-SHA256) with 600,000 iterations and a securely generated 16-byte random salt.
 
 2. **Bucket Padding:**
-   To prevent traffic analysis (inferring the secret based on the ciphertext length), the plaintext JSON string is padded to the nearest predefined bucket size (1 KB, 5 KB, 10 KB). Envelopes that already exceed 10 KB are padded to the next multiple of 10 KB.
-   
+   To prevent traffic analysis (inferring the secret based on the ciphertext length), the plaintext JSON string is padded to the nearest predefined bucket size (1 KB, 5 KB, 10 KB). Envelopes that already exceed 10 KB are padded to the next multiple of 10 KB. File attachments (see `encryptBytes`) are not padded: their size is inherent to the ciphertext, so padding would only add base64 bulk.
+
 3. **Encryption:**
    A 12-byte Initialization Vector (IV) is generated. The padded plaintext is encrypted using AES-256-GCM. The Web Crypto API automatically appends a 16-byte authentication tag to the resulting ciphertext.
 

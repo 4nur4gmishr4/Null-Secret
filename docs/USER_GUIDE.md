@@ -8,7 +8,7 @@
   - [For the sender](#for-the-sender)
   - [For the recipient](#for-the-recipient)
 - [Key Features](#key-features)
-  - [No account required](#no-account-required)
+  - [No account needed to view](#no-account-needed-to-view)
   - [Self-destructing messages](#self-destructing-messages)
   - [End-to-end encryption](#end-to-end-encryption)
   - [Optional password protection](#optional-password-protection)
@@ -59,8 +59,8 @@ Null-Secret is a secure way to share private information that self-destructs aft
 
 ## Key Features
 
-### No account required
-You can use the entire service without signing up. Just create a secret and share the link.
+### No account needed to view
+Opening a shared secret works without signing in. Creating a new secret requires a free account.
 
 ### Self-destructing messages
 Messages disappear after:
@@ -200,7 +200,7 @@ For technical issues or questions, visit:
 - Your messages are encrypted before they leave your device
 - The server never sees your actual content
 - Messages self-destruct automatically
-- No account required for basic use
-- Optional account adds history and security settings
+- Viewing a secret doesn't require an account
+- A free account is required to create secrets, and adds history and security settings
 
 Stay secure with Null-Secret.
