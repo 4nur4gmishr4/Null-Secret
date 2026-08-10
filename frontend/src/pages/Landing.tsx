@@ -15,9 +15,13 @@ const Landing: React.FC = () => {
       setUser(currentUser);
     });
     
-    import('../assets/lotties/privacyfull.json').then((module) => {
-      setPrivacyfullData(module.default);
-    });
+    import('../assets/lotties/privacyfull.json')
+      .then((module) => {
+        setPrivacyfullData(module.default);
+      })
+      .catch(() => {
+        /* The animation is decorative; render the section without it. */
+      });
 
     return () => unsubscribe();
   }, []);
@@ -112,8 +116,8 @@ const Landing: React.FC = () => {
             },
             {
               step: '03',
-              title: 'Nothing on disk',
-              desc: 'Our server holds your locked message in memory only. No database, no backups, no logs. If the server restarts, every message disappears with it.',
+              title: 'Unreadable to us',
+              desc: 'Our server stores only the locked, encrypted message and never the key. It is deleted the moment it expires or is read its agreed number of times.',
             },
           ].map((item, i) => (
             <div
