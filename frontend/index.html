@@ -19,10 +19,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <title>Null-Secret</title>
+  <script>
+    // Apply theme before React hydration to prevent a white-flash (FOUC)
+    // when dark mode is active. Must mirror the key used in ThemeContext.tsx.
+    try {
+      var t = localStorage.getItem('theme-preference');
+      if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) {}
+  </script>
 </head>
 
 <body>
   <div id="root"></div>
+  <noscript>Null-Secret requires JavaScript. Enable JavaScript to create and read secrets.</noscript>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 
