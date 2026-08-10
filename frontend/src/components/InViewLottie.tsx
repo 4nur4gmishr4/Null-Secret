@@ -31,8 +31,9 @@ function InViewLottie({
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(([entry]) => {
-        setIsInView(entry.isIntersecting);
+      const observer = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        if (entry) setIsInView(entry.isIntersecting);
       }, {
         root: null,
         rootMargin: '100px',
@@ -51,6 +52,7 @@ function InViewLottie({
         observer.disconnect();
       };
     }
+    return undefined;
   }, []);
 
   const defaultRendererSettings = {
