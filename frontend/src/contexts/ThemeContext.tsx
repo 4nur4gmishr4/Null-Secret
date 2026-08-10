@@ -43,9 +43,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const theme = preference === 'system' ? osTheme : preference;
 
   useEffect(() => {
-    const body = document.body;
-    body.classList.remove('light', 'dark');
-    body.classList.add(theme);
+    // Apply to <html> (not <body>) so CSS root selectors pick up the theme
+    // immediately, and to match the pre-hydration script in index.html.
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
     try {
       window.localStorage.setItem('theme-preference', preference);
     } catch {
