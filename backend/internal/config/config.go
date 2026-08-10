@@ -22,6 +22,10 @@ type Config struct {
 	BackupDir	string
 }
 
+// Load reads configuration from environment variables, applying development
+// defaults where a variable is unset. In production it refuses to start when
+// MASTER_KEY is missing or malformed, since a per-boot random key would make
+// every stored secret unrecoverable after a restart.
 func Load() *Config {
 	port := strings.TrimSpace(os.Getenv("PORT"))
 	if port == "" {

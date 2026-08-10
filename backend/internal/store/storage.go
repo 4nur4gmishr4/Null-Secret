@@ -26,11 +26,10 @@ import (
 )
 
 var (
-	ErrCapacityExceeded	= errors.New("server capacity exceeded, try again later")
-	ErrNotFound		= errors.New("secret not found")
-	ErrExpired		= errors.New("secret expired")
-	ErrAliasTaken		= errors.New("alias is already taken")
-	ErrLocked		= errors.New("secret is time-locked")
+	ErrNotFound	= errors.New("secret not found")
+	ErrExpired	= errors.New("secret expired")
+	ErrAliasTaken	= errors.New("alias is already taken")
+	ErrLocked	= errors.New("secret is time-locked")
 )
 
 const (
@@ -75,6 +74,10 @@ type RateLimiter struct {
 	max	int
 }
 
+// NewRateLimiter returns an empty per-IP sliding-window limiter. The window is
+// one minute and the map is capped at max entries; the oldest IPs are evicted
+// when the cap is reached so a flood of distinct addresses cannot grow memory
+// without bound.
 func NewRateLimiter() *RateLimiter {
 	return &RateLimiter{
 		hits:	make(map[string]*list.Element),
@@ -83,6 +86,9 @@ func NewRateLimiter() *RateLimiter {
 	}
 }
 
+// Allow reports whether ip may proceed given the sliding one-minute window.
+// Hit timestamps older than the window are dropped before the decision is
+// made, and a successful call records the hit. It is safe for concurrent use.
 func (rl *RateLimiter) Allow(ip string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
@@ -181,6 +187,11 @@ func sqliteDSN(dbPath string) string {
 	return dsn + sep + "_txlock=immediate"
 }
 
+// NewStorage opens (or creates) the SQLite database at dbPath, applies the
+// schema and WAL pragmas, and starts the TTL, backup, and rate-limiter cleanup
+// workers. masterKey is used for at-rest encryption and must be stable across
+// restarts or previously stored secrets become unrecoverable. Call Close to
+// stop the workers and release the file handle.
 func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, error) {
 	db, err := sql.Open("sqlite", sqliteDSN(dbPath))
 	if err != nil {
@@ -233,6 +244,8 @@ func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, er
 	return s, nil
 }
 
+// Close cancels the background workers, waits for them to finish, and closes
+// the underlying database handle. It is safe to call exactly once.
 func (s *Storage) Close() {
 	if s.cancel != nil {
 		s.cancel()
@@ -243,6 +256,8 @@ func (s *Storage) Close() {
 	}
 }
 
+// DB exposes the raw *sql.DB handle for health checks and super-admin queries
+// that do not go through the higher-level secret methods.
 func (s *Storage) DB() *sql.DB {
 	return s.db
 }
@@ -252,6 +267,9 @@ type StorageStats struct {
 	TotalPayloadBytes	int64	`json:"totalPayloadBytes"`
 }
 
+// Stats returns the number of currently stored secrets and the total size in
+// bytes of their encrypted payloads. Read errors are swallowed deliberately:
+// telemetry degrades to zeros rather than failing a health probe.
 func (s *Storage) Stats() StorageStats {
 	var active int
 	var bytes sql.NullInt64
@@ -335,6 +353,11 @@ func generateID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// Store persists an encrypted payload and returns the secret id plus the
+// plaintext admin key (only the SHA-256 hash of the admin key is kept on
+// disk). expiryHours is clamped to a sane range by the caller; alias, when
+// non-empty, is used as the id and must be unique. If the database is at
+// capacity the oldest secrets are evicted first.
 func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int, alias string, unlockAt *time.Time) (string, string, error) {
 	if len(payload) > maxPayload {
 		return "", "", errors.New("payload exceeds maximum allowed size")
@@ -393,33 +416,40 @@ func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int, alias st
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return "", "", ErrAliasTaken
 		}
-		return "", "", err
+		return "", "", fmt.Errorf("store secret: %w", err)
 	}
 
 	return id, adminKey, nil
 }
 
-func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoResponse, bool) {
+// GetInfo returns views, limits and expiry for a secret after verifying the
+// caller holds the admin key. A nil response wrapped in ErrNotFound means the
+// secret does not exist, is expired, or the admin key is invalid — the caller
+// must not distinguish these cases. Any other error is a storage failure and
+// must be surfaced rather than treated as a miss.
+func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoResponse, error) {
 	var storedAdminKey string
 	var views, viewLimit int
 	var expiresAt time.Time
 	var unlockAt *time.Time
 
 	err := s.db.QueryRow(`
-		SELECT admin_key, views, view_limit, expires_at, unlock_at 
+		SELECT admin_key, views, view_limit, expires_at, unlock_at
 		FROM secrets WHERE id = ?
 	`, id).Scan(&storedAdminKey, &views, &viewLimit, &expiresAt, &unlockAt)
-
 	if err != nil {
-		return nil, false
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("lookup secret info: %w", err)
 	}
 
 	if time.Now().UTC().After(expiresAt) {
-		return nil, false
+		return nil, ErrNotFound
 	}
 
 	if !validateAdminKey(storedAdminKey, adminKey) {
-		return nil, false
+		return nil, ErrNotFound
 	}
 
 	return &models.SecretInfoResponse{
@@ -427,7 +457,7 @@ func (s *Storage) GetInfo(id string, adminKey string) (*models.SecretInfoRespons
 		ViewLimit:	viewLimit,
 		ExpiresAt:	expiresAt,
 		UnlockAt:	unlockAt,
-	}, true
+	}, nil
 }
 
 func validateAdminKey(storedHash, providedKey string) bool {
@@ -440,23 +470,33 @@ func validateAdminKey(storedHash, providedKey string) bool {
 	return subtle.ConstantTimeCompare(bStored, bHashed) == 1
 }
 
-func (s *Storage) Burn(id string, adminKey string) bool {
+// Burn deletes a secret when the caller holds the matching admin key. The
+// bool reports whether a row was actually removed: false with a nil error
+// means the secret does not exist or the admin key is invalid, while a non-nil
+// error signals a storage failure that must be surfaced to the caller.
+func (s *Storage) Burn(id string, adminKey string) (bool, error) {
 	var storedAdminKey string
 	err := s.db.QueryRow("SELECT admin_key FROM secrets WHERE id = ?", id).Scan(&storedAdminKey)
 	if err != nil {
-		return false
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("lookup secret for burn: %w", err)
 	}
 
 	if !validateAdminKey(storedAdminKey, adminKey) {
-		return false
+		return false, nil
 	}
 
 	res, err := s.db.Exec("DELETE FROM secrets WHERE id = ?", id)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("burn secret: %w", err)
 	}
-	affected, _ := res.RowsAffected()
-	return affected > 0
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("count burned rows: %w", err)
+	}
+	return affected > 0, nil
 }
 
 func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
@@ -549,13 +589,20 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 	return secret, nil
 }
 
-func (s *Storage) PurgeAll() int {
+// PurgeAll removes every stored secret and returns the number of rows that
+// were deleted. Unlike the other mutating methods the error is propagated so
+// the super-admin handler can report a real 503 instead of claiming a purge
+// happened when the DELETE never ran.
+func (s *Storage) PurgeAll() (int, error) {
 	res, err := s.db.Exec("DELETE FROM secrets")
 	if err != nil {
-		return 0
+		return 0, fmt.Errorf("purge secrets: %w", err)
 	}
-	affected, _ := res.RowsAffected()
-	return int(affected)
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("count purged rows: %w", err)
+	}
+	return int(affected), nil
 }
 
 func (s *Storage) startTTLWorker(ctx context.Context) {
