@@ -14,10 +14,7 @@ const Success: React.FC = () => {
   
   const keyStr = location.hash.replace('#', '');
   const adminKey = location.state?.adminKey;
-  
-  React.useEffect(() => {
-  }, [adminKey, id]);
-  
+
   const [copied, setCopied] = useState(false);
   const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [showQR, setShowQR] = useState(false);

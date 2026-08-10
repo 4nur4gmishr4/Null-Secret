@@ -9,7 +9,6 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 interface CurrentDevice {
   readonly label: string;
   readonly platform: string;
-  readonly userAgent: string;
   readonly lastActiveAt: string;
   readonly signedInAt: string;
 }
@@ -39,7 +38,6 @@ function describeCurrentDevice(user: User): CurrentDevice {
   return {
     label,
     platform,
-    userAgent: ua,
     lastActiveAt: 'Active now',
     signedInAt: user.metadata.lastSignInTime
       ? new Date(user.metadata.lastSignInTime).toLocaleString()
@@ -55,15 +53,12 @@ const DeviceSessions: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        navigate('/login');
-        return;
-      }
+      if (!currentUser) return; // ProtectedRoute already redirects unauthenticated users
       setUser(currentUser);
       setDevice(describeCurrentDevice(currentUser));
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const handleSignOutThisDevice = useCallback(async () => {
     setSigningOut(true);
@@ -97,9 +92,6 @@ const DeviceSessions: React.FC = () => {
                 </p>
                 <p className="text-[11px]" style={{ color: 'var(--text-success)' }}>
                   {device.lastActiveAt}
-                </p>
-                <p className="text-[10px] mono break-all pt-2" style={{ color: 'var(--text-tertiary)' }}>
-                  {device.userAgent}
                 </p>
               </div>
               <button

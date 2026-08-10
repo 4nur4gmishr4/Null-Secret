@@ -61,7 +61,7 @@ quota counter, a history view, and account-level security settings.
 │                                                                     │
 │   ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐    │
 │   │ AES-256-GCM  │  │ PBKDF2-SHA256│  │ Bucket-padded payload  │    │
-│   │ encrypt      │  │ key stretch  │  │ (1K / 5K / 10K / 100K) │    │
+│   │ encrypt      │  │ key stretch  │  │ (1K / 5K / 10K) │    │
 │   └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘    │
 │          └─────────────────┴──────────────────────┘                 │
 │                            │                                        │
@@ -106,9 +106,9 @@ quota counter, a history view, and account-level security settings.
 | Integrity / authenticity  | GCM authentication tag (rejects any tampering)                    |
 | Key delivery              | URL fragment (RFC 3986 §3.5: never sent to server)                |
 | Optional second factor    | PBKDF2-HMAC-SHA256 with 600,000 iterations                         |
-| Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB / 100 KB buckets     |
+| Traffic-analysis resistance | Ciphertext padded to 1 KB / 5 KB / 10 KB buckets     |
 | Transport                 | HSTS preload, X-Content-Type-Options, X-Frame-Options DENY        |
-| Content security          | Locked-down CSP with `connect-src` whitelist                      |
+| Content security          | Build-time CSP `_headers` file, `connect-src` pinned to the API origin |
 | Rate limiting             | 100 req/sec global, per-IP limits                                 |
 | Storage                   | SQLite database with automatic GC on TTL or view-limit hit        |
 | Account deletion          | `Destroy Vault` deletes Firestore data + Firebase Auth user       |
@@ -175,27 +175,6 @@ country geolocation, GDPR data export/delete/audit, multi-region
 replication, operator console) are flagged there and not stubbed in
 the UI to avoid implying a security feature is active when it isn't.
 
-### Current Features
-
-The system already does:
-- Browser-side AES-256-GCM encryption
-- Optional password layer with PBKDF2 (600,000 iterations)
-- One-time, multi-view, or time-limited links
-- File attachments up to 10 MB total (single file inline, multiple files auto-zipped)
-- SQLite-based storage with automatic GC
-- Admin links so the creator can see view counts and burn early
-- Email and Google sign-in (Firebase) with daily quota tracking
-- Light, dark, and system theme
-- Activity log of secrets you have created
-- Health indicator that pings the backend
-- Super admin dashboard for advanced management
-- Drag and drop file upload
-- Toast notification system
-- Error boundary for graceful error handling
-- Session timeout settings
-- Device session management
-- Account deletion with Destroy Vault
-
 ---
 
 ## Closed Source
@@ -207,5 +186,7 @@ This software is proprietary. We do not accept external pull requests, feature b
 ## License
 
 Proprietary software designed, developed, and managed by **Anurag Mishra**. All rights
-reserved. See [Privacy Manifesto](https://github.com/4nur4gmishr4/Null-Secret#)
-in-app for the privacy contract with users.
+reserved. You may view this repository for reference, but copying, modifying,
+redistributing, or re-hosting the code — in whole or in part — is strictly
+prohibited without prior written permission. See [`LICENSE`](./LICENSE) for the
+full legal terms, including trademark and reverse-engineering provisions.

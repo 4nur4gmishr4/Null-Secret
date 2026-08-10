@@ -23,13 +23,11 @@ const OPTIONS: readonly Option[] = [
 
 const SessionTimeout: React.FC = () => {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState<SessionTimeoutOption>(() => {
-    return String(readSessionTimeoutMinutes()) as SessionTimeoutOption;
-  });
+  // Read the stored preference exactly once; both states below mirror the same value.
+  const [initial] = useState(readSessionTimeoutMinutes);
+  const [selected, setSelected] = useState<SessionTimeoutOption>(String(initial) as SessionTimeoutOption);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [persisted, setPersisted] = useState<SessionTimeoutOption>(() => {
-    return String(readSessionTimeoutMinutes()) as SessionTimeoutOption;
-  });
+  const [persisted, setPersisted] = useState<SessionTimeoutOption>(String(initial) as SessionTimeoutOption);
 
   const handleSave = useCallback(() => {
     writeSessionTimeoutMinutes(selected);

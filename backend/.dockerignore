@@ -1,0 +1,10 @@
+# Keep secrets, runtime data, and local build artifacts out of the image.
+.env*
+*.db
+*.db-wal
+*.db-shm
+backup.db
+backup.db.tmp
+*.exe
+*.test
+coverage.*

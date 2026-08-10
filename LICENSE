@@ -2,13 +2,28 @@ Copyright (c) 2026 Anurag Mishra. All Rights Reserved.
 
 PROPRIETARY AND CONFIDENTIAL
 
-This source code, including but not limited to all software, documentation, and graphical assets contained within this repository (the "Software"), is the confidential and proprietary intellectual property of Anurag Mishra.
+This source code, including but not limited to all software, documentation, graphical assets, and the "Null-Secret" product design contained within this repository (the "Software"), is the confidential and proprietary intellectual property of Anurag Mishra.
 
 1. NO RIGHT TO COPY OR USE
-You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, or using this Software, in whole or in part, for any purpose (commercial or non-commercial), without the explicit, prior, written permission of the copyright holder.
+You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, sublicensing, or using this Software, in whole or in part, for any purpose (commercial or non-commercial), without the explicit, prior, written permission of the copyright holder.
 
 2. NO OPEN SOURCE
-This is NOT open-source software. The presence of this code in a public repository on GitHub (or any other platform) does not grant any implicit or explicit licenses under copyright, patent, trademark, or trade secret law. You may view the source code solely for the purpose of reading it on the platform where it is hosted, but you may not download, clone, fork, or execute it.
+This is NOT open-source software. The presence of this code in a public repository on GitHub (or any other platform) does not grant any implicit or explicit licenses under copyright, patent, trademark, or trade secret law. You may view the source code solely for the purpose of reading it on the platform where it is hosted, but you may not download, clone, fork, re-host, or execute it except as permitted by the hosting platform's terms of service.
 
-3. NO WARRANTY
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+3. NO REVERSE ENGINEERING
+You may not decompile, disassemble, reverse engineer, or otherwise attempt to derive the source code, algorithms, or internal structure of the Software for any purpose.
+
+4. TRADEMARKS
+"Null-Secret" and any associated names, logos, or branding are trademarks of Anurag Mishra. Nothing in this license grants you any right to use these trademarks, and you may not use them in connection with any product or service without prior written permission.
+
+5. PRESERVATION OF NOTICES
+You may not remove, alter, or obscure any copyright, trademark, or proprietary notice contained in the Software.
+
+6. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+7. LIMITATION OF LIABILITY
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+8. GOVERNING LAW
+This license shall be governed by and construed in accordance with the laws of the Republic of India, without regard to its conflict-of-law provisions. Any dispute arising under or in connection with this license shall be subject to the exclusive jurisdiction of the courts of India.

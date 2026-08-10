@@ -38,6 +38,13 @@ const (
 	maxPayload	= 15 * 1024 * 1024
 )
 
+// MaxSecrets returns the hard cap on concurrently stored secrets. Exposed so
+// the health/telemetry handlers can report capacity without duplicating the
+// constant.
+func MaxSecrets() int {
+	return maxSecrets
+}
+
 const schema = `
 CREATE TABLE IF NOT EXISTS secrets (
 	id TEXT PRIMARY KEY,
@@ -154,8 +161,25 @@ type Storage struct {
 	backupDir	string
 }
 
+// sqliteDSN forces every transaction to BEGIN IMMEDIATE so the read-modify-
+// write sequences in Store and RetrieveAndDelete take the write lock up front.
+// With the driver default (deferred), two concurrent readers can each see a
+// stale snapshot and then deadlock trying to upgrade to a writer; IMMEDIATE
+// fails fast with SQLITE_BUSY, which execWithRetry already backsoff on.
+func sqliteDSN(dbPath string) string {
+	dsn := dbPath
+	if !strings.HasPrefix(dsn, "file:") {
+		dsn = "file:" + dsn
+	}
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	return dsn + sep + "_txlock=immediate"
+}
+
 func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", sqliteDSN(dbPath))
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +190,15 @@ func NewStorage(dbPath string, masterKey []byte, backupDir string) (*Storage, er
 
 	db.Exec("ALTER TABLE secrets ADD COLUMN unlock_at DATETIME;")
 
-	db.Exec("PRAGMA journal_mode=WAL;")
+	// Verify WAL actually took effect: if it silently falls back (e.g. a
+	// read-only filesystem), the WAL-dependent backup and concurrency behavior
+	// is not what operators believe it is.
+	var journalMode string
+	if err := db.QueryRow("PRAGMA journal_mode=WAL;").Scan(&journalMode); err != nil {
+		slog.Warn("failed to read journal_mode", "error", err)
+	} else if !strings.EqualFold(journalMode, "wal") {
+		slog.Warn("journal_mode is not WAL; backups and concurrency are degraded", "journal_mode", journalMode)
+	}
 	db.Exec("PRAGMA synchronous=NORMAL;")
 	db.Exec("PRAGMA busy_timeout=5000;")
 	db.SetMaxOpenConns(25)
@@ -430,6 +462,7 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 	var unlockAt *time.Time
 	var viewLimit, views int
 	var lockedSecret *models.Secret
+	var secret *models.Secret
 
 	err := execWithRetry(func() error {
 		tx, err := s.db.Begin()
@@ -451,8 +484,15 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 		}
 
 		if time.Now().UTC().After(expiresAt) {
-			tx.Exec("DELETE FROM secrets WHERE id = ?", id)
-			tx.Commit()
+			// Deleting the row here is the entire point of the 410: if the delete
+			// or commit fails, the caller must see the error instead of assuming
+			// the row is gone while it silently survives in the table.
+			if _, err = tx.Exec("DELETE FROM secrets WHERE id = ?", id); err != nil {
+				return err
+			}
+			if err = tx.Commit(); err != nil {
+				return err
+			}
 			return ErrExpired
 		}
 
@@ -465,6 +505,15 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 
 		views++
 
+		// Decrypt before the row is destroyed: a decrypt failure (corrupted
+		// ciphertext, master key rotated) must not delete the secret and then
+		// return an error, leaving the data gone-but-unreadable. Rollback keeps
+		// the row intact and the secret can be read again later.
+		decPayload, err := decryptPayload(payload, s.masterKey)
+		if err != nil {
+			return err
+		}
+
 		if views >= viewLimit {
 			_, err = tx.Exec("DELETE FROM secrets WHERE id = ?", id)
 		} else {
@@ -475,6 +524,15 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 			return err
 		}
 
+		secret = &models.Secret{
+			ID:		id,
+			Payload:	decPayload,
+			ExpiresAt:	expiresAt,
+			UnlockAt:	unlockAt,
+			ViewLimit:	viewLimit,
+			Views:		views,
+		}
+
 		return tx.Commit()
 	})
 
@@ -483,20 +541,6 @@ func (s *Storage) RetrieveAndDelete(id string) (*models.Secret, error) {
 			return lockedSecret, err
 		}
 		return nil, err
-	}
-
-	decPayload, err := decryptPayload(payload, s.masterKey)
-	if err != nil {
-		return nil, err
-	}
-
-	secret := &models.Secret{
-		ID:		id,
-		Payload:	decPayload,
-		ExpiresAt:	expiresAt,
-		UnlockAt:	unlockAt,
-		ViewLimit:	viewLimit,
-		Views:		views,
 	}
 
 	return secret, nil
@@ -544,13 +588,19 @@ func (s *Storage) startBackupWorker(ctx context.Context) {
 			return
 		case <-ticker.C:
 			backupFile := filepath.Join(s.backupDir, "backup.db")
-			_ = os.Remove(backupFile)
-			sanitizedPath := strings.ReplaceAll(backupFile, "'", "''")
+			// Write to a temp path and atomically rename over the previous backup
+			// only after VACUUM INTO succeeds, so a failed backup never leaves a
+			// gap where the last good copy has already been deleted.
+			tmpFile := filepath.Join(s.backupDir, "backup.db.tmp")
+			sanitizedTmp := strings.ReplaceAll(tmpFile, "'", "''")
 			err := execWithRetry(func() error {
-				_, err := s.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", sanitizedPath))
-				return err
+				if _, err := s.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", sanitizedTmp)); err != nil {
+					return err
+				}
+				return os.Rename(tmpFile, backupFile)
 			})
 			if err != nil {
+				_ = os.Remove(tmpFile)
 				slog.Error("Backup worker failed", "error", err)
 			} else {
 				slog.Info("Database successfully backed up", "file", backupFile)
