@@ -75,6 +75,9 @@ const ViewSecret: React.FC = () => {
 
   const handleFetch = async () => {
     setLoading(true);
+    // Swap to the full-page "Unlocking..." view keeps the previous scroll offset,
+    // which can leave the spinner off-screen (footer visible instead). Jump to top.
+    window.scrollTo(0, 0);
     try {
       const resp = await fetch(`${API_BASE}/secret/${id}`);
       if (!resp.ok) throw new Error('We could not find this message. Either the link is wrong, or it has already been opened the maximum number of times.');
@@ -99,6 +102,9 @@ const ViewSecret: React.FC = () => {
   const handleDecrypt = async (data = bundledData, pass = password) => {
     if (!data) return;
     setLoading(true);
+    // Same as handleFetch: the password card sits lower on the page, and the swap
+    // to the centered loading view preserves the old offset unless we reset it.
+    window.scrollTo(0, 0);
     try {
       let key = await importKey(keyStr);
       if (data.s) {
