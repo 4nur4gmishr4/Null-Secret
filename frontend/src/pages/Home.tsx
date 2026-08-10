@@ -51,16 +51,16 @@ const Home: React.FC = () => {
   const passwordStrength = estimatePasswordStrength(password);
 
   const handleFilesAdded = useCallback((newFiles: File[]) => {
-    setFiles(prev => {
-      const allFiles = [...prev, ...newFiles];
-      const totalSize = allFiles.reduce((acc, f) => acc + f.size, 0);
-      if (totalSize > 10 * 1024 * 1024) {
-        setError('Your files together must be smaller than 10 MB.');
-        return prev;
-      }
-      return allFiles;
-    });
-  }, []);
+    // Compute the size guard outside setFiles: state updaters must stay pure
+    // (React may invoke them twice in StrictMode), so setError cannot live inside.
+    const allFiles = [...files, ...newFiles];
+    const totalSize = allFiles.reduce((acc, f) => acc + f.size, 0);
+    if (totalSize > 10 * 1024 * 1024) {
+      setError('Your files together must be smaller than 10 MB.');
+      return;
+    }
+    setFiles(allFiles);
+  }, [files]);
 
   const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
@@ -77,7 +77,7 @@ const Home: React.FC = () => {
 
     try {
       const user = auth.currentUser;
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().slice(0, 10);
 
       try {
         if (user) {
@@ -116,7 +116,8 @@ const Home: React.FC = () => {
         }
       } catch (usageErr: unknown) {
         if (usageErr instanceof Error && usageErr.message === 'LIMIT_EXCEEDED') throw usageErr;
-        console.error('Usage tracking failed', usageErr);
+        // Usage tracking is best-effort; a failure must not surface as a console
+        // error in an encrypted-messaging product. Keep it silent and continue.
         const code = (usageErr as { code?: string } | null)?.code;
         if (code === 'permission-denied') {
           throw new Error('INFRASTRUCTURE_ERROR');
@@ -130,8 +131,8 @@ const Home: React.FC = () => {
       if (password) {
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
         let saltBinary = '';
-        for (let i = 0; i < salt.length; i++) {
-          saltBinary += String.fromCharCode(salt[i]);
+        for (const byte of salt) {
+          saltBinary += String.fromCharCode(byte);
         }
         saltStr = btoa(saltBinary);
         key = await deriveKeyFromPassword(password, salt);
@@ -149,19 +150,21 @@ const Home: React.FC = () => {
 
         let fileData;
         if (files.length === 1) {
+          const file = files[0];
+          if (!file) throw new Error('Attached file is missing');
           const reader = new FileReader();
           const fileBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
             reader.onerror = reject;
-            reader.readAsDataURL(files[0]);
+            reader.readAsDataURL(file);
           });
-          fileData = { name: files[0].name, type: files[0].type, data: `data:${files[0].type || 'application/octet-stream'};base64,${fileBase64}` };
+          fileData = { name: file.name, type: file.type, data: `data:${file.type || 'application/octet-stream'};base64,${fileBase64}` };
         } else {
           const zipped = zipSync(zipObj);
           const blob = new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/zip' });
           const reader = new FileReader();
           const zipBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
