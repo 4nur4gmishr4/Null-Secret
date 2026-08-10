@@ -150,6 +150,11 @@ const Home: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    // The compose form is tall — the Create Secret button sits below the fold on
+    // short viewports. Without this, the swap to the loading view keeps the old
+    // scroll position, so the spinner/progress bar lands off-screen and the user
+    // sees the footer instead. Jump to top so the progress is immediately visible.
+    window.scrollTo(0, 0);
 
     try {
       const user = auth.currentUser;
