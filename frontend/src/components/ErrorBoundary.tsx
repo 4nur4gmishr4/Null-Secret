@@ -86,7 +86,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 border: '1px solid var(--border-default)',
               }}
             >
-              {this.state.error.message}
+              An unexpected error occurred.
             </pre>
           )}
           <div className="flex gap-3">

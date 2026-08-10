@@ -13,7 +13,7 @@ interface SectionEntry {
 const SECTIONS: readonly SectionEntry[] = [
   { id: 'lock', number: '01', title: 'How your message gets locked' },
   { id: 'link', number: '02', title: 'The link carries the key, not us' },
-  { id: 'memory', number: '03', title: 'We never write to disk' },
+  { id: 'memory', number: '03', title: 'How your message is stored' },
   { id: 'collect', number: '04', title: 'What we deliberately don\u2019t collect' },
   { id: 'promise', number: '05', title: 'The promise' },
 ];
@@ -40,8 +40,8 @@ const PrivacyPolicy: React.FC = () => {
       {/* Quick summary cards */}
       <section aria-label="Privacy at a glance" className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 p-6 md:p-8 border" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)' }}>
         <div className="space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Nothing on disk</h3>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Your message lives in memory only. We never write it to a hard drive, log it, or back it up.</p>
+          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Only ciphertext, ever</h3>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Your message is stored only as unreadable ciphertext, never logged in plaintext, and deleted the moment it expires or is viewed its limit of times.</p>
         </div>
         <div className="space-y-2">
           <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Locked on your device</h3>
@@ -135,35 +135,35 @@ const PrivacyPolicy: React.FC = () => {
 
         <section id="memory" className="section-anchor grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           <div className="lg:col-span-4 lg:sticky lg:top-24">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>03. We never write to disk</h2>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>03. How your message is stored</h2>
             <div className="h-1 w-12 mt-4" style={{ background: 'var(--text-primary)' }} />
           </div>
           <div className="lg:col-span-8 space-y-6">
-            <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Your message lives in memory, briefly</h3>
+            <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Encrypted at rest, deleted on schedule</h3>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              Most websites save your data to a hard drive so they can show it to you again next week. Null-Secret deliberately does the opposite. We hold your encrypted message in the server&rsquo;s working memory, the same kind of memory that gets wiped when the power blinks.
+              Your message is encrypted in your browser before it ever reaches us. What we receive is ciphertext &mdash; unreadable without the key, which never leaves your device. That ciphertext is written to an encrypted database on our server until it expires or reaches its view limit, and then it is permanently deleted.
             </p>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              That means there is nothing to back up, nothing to restore, and nothing to subpoena. When the message reaches its view limit or expiration time, we delete it. When the server restarts, every message disappears with it. There is no recovery path because there is nothing to recover.
+              We keep short-lived backups so an operational incident cannot destroy messages before their time &mdash; but every backup is the same unreadable ciphertext, and the decryption key is never stored next to it. If the server is lost, the data lost is ciphertext that no one can read.
             </p>
             <ul className="space-y-4">
               <li className="flex gap-4">
                 <span className="font-bold text-xs mt-1" style={{ color: 'var(--text-primary)' }}>[1]</span>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Your encrypted message lives only in our server&rsquo;s working memory. It never touches a hard drive.</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Your message is stored only as ciphertext. The key to read it exists only on the device that created it and in the link you share &mdash; never on our server.</p>
               </li>
               <li className="flex gap-4">
                 <span className="font-bold text-xs mt-1" style={{ color: 'var(--text-primary)' }}>[2]</span>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Every message has a built-in expiration. Once it expires, or once it has been viewed the agreed number of times, we wipe it on the spot.</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Every message has a built-in expiration. Once it expires, or once it has been viewed the agreed number of times, the ciphertext is deleted on the spot.</p>
               </li>
               <li className="flex gap-4">
                 <span className="font-bold text-xs mt-1" style={{ color: 'var(--text-primary)' }}>[3]</span>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>If the server reboots for any reason, every message dies with it. There is no disaster-recovery archive to chase.</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Backups are encrypted, are rotated regularly, and hold only ciphertext &mdash; there is no plaintext and no key for anyone to recover.</p>
               </li>
             </ul>
             <div className="p-5 md:p-6 border-l-4" style={{ borderColor: 'var(--text-primary)', background: 'var(--bg-elevated)' }}>
               <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-tertiary)' }}>Technical note</p>
               <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Storage is split across 256 in-process shards with their own locks for concurrent access. A background sweeper deletes expired entries on a fixed cadence. There is no Redis, no SQL, no S3, no remote logging system. The Go process is the entire storage layer.
+                Ciphertext is stored in an encrypted SQLite database running in WAL mode. Expired and over-limit rows are purged by a TTL worker on a fixed cadence, and a backup worker writes rotating encrypted snapshots. The AES-256-GCM server key is provided at boot via environment variable and never stored alongside the data.
               </p>
             </div>
           </div>

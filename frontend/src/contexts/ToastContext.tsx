@@ -27,14 +27,16 @@ const TOAST_DURATION = 3500;
 const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: number) => void }> = ({ toast, onDismiss }) => {
   const [exiting, setExiting] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const dismissTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     timerRef.current = window.setTimeout(() => {
       setExiting(true);
-      window.setTimeout(() => onDismiss(toast.id), 300);
+      dismissTimerRef.current = window.setTimeout(() => onDismiss(toast.id), 300);
     }, TOAST_DURATION);
     return () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      if (dismissTimerRef.current !== null) window.clearTimeout(dismissTimerRef.current);
     };
   }, [toast.id, onDismiss]);
 
@@ -80,8 +82,10 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: number) => void }> = (
         cursor: 'pointer',
       }}
       onClick={() => {
+        if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+        if (dismissTimerRef.current !== null) window.clearTimeout(dismissTimerRef.current);
         setExiting(true);
-        window.setTimeout(() => onDismiss(toast.id), 300);
+        dismissTimerRef.current = window.setTimeout(() => onDismiss(toast.id), 300);
       }}
     >
       <span style={{ flex: 1 }}>{toast.message}</span>

@@ -14,9 +14,8 @@
 /frontend/ @4nur4gmishr4
 
 # CI/CD & Infrastructure
-# Changes to GitHub Actions, Render deployments, or Dependabot require operational review.
+# Changes to GitHub Actions or Dependabot config require operational review.
 /.github/workflows/ @4nur4gmishr4
-/render.yaml @4nur4gmishr4
 
 # Documentation & Governance
 # Minor typos in docs can technically be merged without a block, but we route them here for visibility.
