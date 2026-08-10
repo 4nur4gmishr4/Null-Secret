@@ -46,6 +46,11 @@ function parseFilePayload(bytes: Uint8Array): FilePayload | null {
   };
 }
 
+/** Inline-previewable media: images (incl. SVG — scripts do not run in <img>) and video. */
+function isPreviewable(type: string): boolean {
+  return type.startsWith('image/') || type.startsWith('video/');
+}
+
 const ViewSecret: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -216,22 +221,43 @@ const ViewSecret: React.FC = () => {
         )}
 
         {fileData && (
-          <div className="surface flex justify-between items-center p-4">
-            <div className="flex items-center gap-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-secondary)' }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              <span className="text-xs font-medium truncate max-w-[200px]">{fileData.name}</span>
+          <div className="space-y-2">
+            {isPreviewable(fileData.type) && (
+              <div className="surface p-2 flex justify-center overflow-hidden">
+                {fileData.type.startsWith('video/') ? (
+                  <video
+                    src={fileData.data}
+                    controls
+                    preload="metadata"
+                    className="max-w-full max-h-96 object-contain"
+                    aria-label={`Preview of ${fileData.name}`}
+                  />
+                ) : (
+                  <img
+                    src={fileData.data}
+                    alt={`Preview of ${fileData.name}`}
+                    className="max-w-full max-h-96 object-contain"
+                  />
+                )}
+              </div>
+            )}
+            <div className="surface flex justify-between items-center p-4">
+              <div className="flex items-center gap-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-secondary)' }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <span className="text-xs font-medium truncate max-w-[200px]">{fileData.name}</span>
+              </div>
+              <a
+                href={fileData.data}
+                download={fileData.name}
+                className="btn btn-secondary text-xs"
+                style={{ padding: '6px 12px', textDecoration: 'none' }}
+              >
+                Download
+              </a>
             </div>
-            <a
-              href={fileData.data}
-              download={fileData.name}
-              className="btn btn-secondary text-xs"
-              style={{ padding: '6px 12px', textDecoration: 'none' }}
-            >
-              Download
-            </a>
           </div>
         )}
 
