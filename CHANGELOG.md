@@ -12,6 +12,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 - Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CRYPTOGRAPHY_SPEC.md`, `docs/THREAT_MODEL.md`, `.github/SUPPORT.md`.
 - `.github/ISSUE_TEMPLATE/` with bug-report and feature-request forms.
 
+### Removed
+- `docs/PROJECT_STATUS.md`: stale internal status report that duplicated README, CHANGELOG, and PERFORMANCE.md, and contained an outdated self-score (82/100) superseded by the full audit.
+
+### Changed
+- `LICENSE` strengthened with trademark clause, reverse-engineering prohibition, copyright-notice preservation, limitation of liability, and governing law (Republic of India).
+- `README.md`: removed the duplicated "Current Features" bullet list (already in "What It Does"), replaced the License section wording, and fixed a broken Privacy Manifesto self-link.
+- `docs/FEATURES.md`: removed shipped features (session control, auto-logout, account deletion, email change, custom aliases, time-window unlock, drag-and-drop, QR, toasts, CSV export, password strength meter) and the duplicate "already does" list; the document is now the forward-looking roadmap only.
+- `docs/ARCHITECTURE.md`: added the `unlock_at` column to the schema block.
+- `SECURITY.md`: added `Permissions-Policy` to the security headers list.
+
 ### Changed
 - `.gitignore` rewritten with sectioned, professional patterns. `.env.example` is now correctly excluded from the ignore list so developers can bootstrap.
 - Footer no longer displays a hard-coded version string; the marketing copy now reads "Built for privacy".
