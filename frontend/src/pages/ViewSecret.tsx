@@ -12,7 +12,7 @@ const ViewSecret: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const keyStr = location.hash.replace('#', '').split('|')[0];
+  const keyStr = location.hash.replace('#', '');
   const [password, setPassword] = useState('');
   const [decrypted, setDecrypted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
