@@ -41,6 +41,9 @@ type API struct {
 	sem           chan struct{}
 }
 
+// NewAPI wires the storage layer and config into an API, building the CORS
+// policy from the allowed-origins list and pre-allocating the global token
+// bucket and the in-flight concurrency semaphore.
 func NewAPI(s *store.Storage, cfg *config.Config) *API {
 	return &API{
 		store:         s,
@@ -195,6 +198,9 @@ func (c *corsConfig) Middleware(next http.Handler) http.Handler {
 	})
 }
 
+// SetupRoutes builds the chi router with the request-logging, recovery, CORS,
+// and three rate-limit layers applied globally, then registers the public and
+// super-admin endpoints.
 func (api *API) SetupRoutes() *chi.Mux {
 	r := chi.NewRouter()
 
@@ -222,6 +228,9 @@ func (api *API) SetupRoutes() *chi.Mux {
 	return r
 }
 
+// GlobalRateLimitMiddleware enforces a process-wide token bucket (100 req/s,
+// burst 100) that acts as the CPU circuit-breaker. It is deliberately not a
+// per-client limit; the per-IP sliding window is the correctness boundary.
 func (api *API) GlobalRateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !api.globalLimiter.Allow() {
@@ -232,6 +241,10 @@ func (api *API) GlobalRateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// ConcurrencyMiddleware caps the number of in-flight requests at 100 via a
+// non-blocking channel acquire. When the semaphore is exhausted the request is
+// rejected with 503 instead of queueing, which would pile up memory on a small
+// instance under a burst.
 func (api *API) ConcurrencyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
@@ -244,6 +257,10 @@ func (api *API) ConcurrencyMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// RateLimitMiddleware enforces the per-IP sliding window (20 requests per
+// minute). The client IP is derived from RemoteAddr (or the RealIP middleware
+// when TRUST_PROXY is set) and collapsed to a /64 for IPv6 so suffix rotation
+// cannot evade the limit.
 func (api *API) RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !api.store.Limiter.Allow(clientIP(r)) {
@@ -274,6 +291,9 @@ func (api *API) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleTelemetry reports process memory, goroutine count, and storage
+// utilisation to a caller holding the SUPER_ADMIN_KEY. It exists so operators
+// can watch the eviction ceiling and 429 pressure without external tooling.
 func (api *API) HandleTelemetry(w http.ResponseWriter, r *http.Request) {
 	adminKey := adminKeyFrom(r)
 	superKey := api.config.SuperAdminKey
@@ -315,6 +335,10 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, models.ErrorResponse{Error: models.APIError{Code: http.StatusText(status), Message: msg}})
 }
 
+// HandleCreateSecret accepts an already-encrypted payload plus expiry and view
+// limits, validates the input, and delegates storage. The request body is
+// capped by MaxBytesReader before decoding so oversized uploads are rejected
+// without buffering them into memory.
 func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
 
@@ -368,10 +392,6 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, err.Error())
 			return
 		}
-		if errors.Is(err, store.ErrCapacityExceeded) {
-			writeError(w, http.StatusServiceUnavailable, err.Error())
-			return
-		}
 		slog.Error("store failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to store secret")
 		return
@@ -379,6 +399,8 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, models.CreateSecretResponse{ID: id, AdminKey: adminKey})
 }
 
+// HandleGetSecretInfo returns views, limit, and expiry for a secret to a
+// caller who proves the admin key. It is the data backing the admin dashboard.
 func (api *API) HandleGetSecretInfo(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
@@ -392,16 +414,24 @@ func (api *API) HandleGetSecretInfo(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "missing admin key")
 		return
 	}
-	info, ok := api.store.GetInfo(id, adminKey)
-	if !ok {
-		slog.Warn("Secret info not found or invalid admin key", "req_id", reqID)
-		writeError(w, http.StatusNotFound, "secret not found or invalid admin key")
+	info, err := api.store.GetInfo(id, adminKey)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			slog.Warn("Secret info not found or invalid admin key", "req_id", reqID)
+			writeError(w, http.StatusNotFound, "secret not found or invalid admin key")
+			return
+		}
+		slog.Error("failed to read secret info", "req_id", reqID, "error", err)
+		writeError(w, http.StatusServiceUnavailable, "storage unavailable")
 		return
 	}
 	slog.Info("Secret info retrieved", "req_id", reqID)
 	writeJSON(w, http.StatusOK, info)
 }
 
+// HandleBurnSecret permanently deletes a secret before its natural expiry when
+// the caller holds the matching admin key. This is the "burn early" path from
+// the admin dashboard.
 func (api *API) HandleBurnSecret(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
@@ -415,7 +445,13 @@ func (api *API) HandleBurnSecret(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "missing admin key")
 		return
 	}
-	if api.store.Burn(id, adminKey) {
+	burned, err := api.store.Burn(id, adminKey)
+	if err != nil {
+		slog.Error("failed to burn secret", "req_id", reqID, "error", err)
+		writeError(w, http.StatusServiceUnavailable, "storage unavailable")
+		return
+	}
+	if burned {
 		slog.Info("Secret successfully burned by admin", "req_id", reqID)
 		writeJSON(w, http.StatusOK, map[string]string{"status": "burned"})
 		return
@@ -424,6 +460,9 @@ func (api *API) HandleBurnSecret(w http.ResponseWriter, r *http.Request) {
 	writeError(w, http.StatusNotFound, "secret not found or invalid admin key")
 }
 
+// HandleGetSecret retrieves and destroys a secret in one transactional step,
+// honouring the view limit, expiry (410 Gone), and the optional time-lock
+// (423 Locked with the unlock time).
 func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	reqID := middleware.GetReqID(r.Context())
@@ -462,6 +501,9 @@ func (api *API) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandlePurgeAll wipes every stored secret. It is restricted to the super
+// admin key and reports the number of rows removed so an operator can confirm
+// the purge actually ran.
 func (api *API) HandlePurgeAll(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(r.Context())
 
@@ -474,11 +516,19 @@ func (api *API) HandlePurgeAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count := api.store.PurgeAll()
+	count, err := api.store.PurgeAll()
+	if err != nil {
+		slog.Error("purge failed", "req_id", reqID, "error", err)
+		writeError(w, http.StatusServiceUnavailable, "purge failed")
+		return
+	}
 	slog.Info("All secrets purged by super admin", "req_id", reqID, "purged_count", count)
 	writeJSON(w, http.StatusOK, map[string]any{"status": "purged", "count": count})
 }
 
+// HandleAdminLogin lets a caller prove they hold the super admin key without
+// touching any secret data. It is a cheap constant-time credential check used
+// to gate the super-admin client.
 func (api *API) HandleAdminLogin(w http.ResponseWriter, r *http.Request) {
 	adminKey := adminKeyFrom(r)
 	superKey := api.config.SuperAdminKey

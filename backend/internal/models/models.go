@@ -5,9 +5,7 @@ import "time"
 
 type Secret struct {
 	ID		string		`json:"id"`
-	AdminKey	string		`json:"-"`
 	Payload		[]byte		`json:"payload"`
-	CreatedAt	time.Time	`json:"createdAt"`
 	ExpiresAt	time.Time	`json:"expiresAt"`
 	UnlockAt	*time.Time	`json:"unlockAt,omitempty"`
 	ViewLimit	int		`json:"viewLimit"`
