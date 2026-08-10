@@ -73,13 +73,23 @@ func Load() *Config {
 
 	masterKeyStr := strings.TrimSpace(os.Getenv("MASTER_KEY"))
 	var masterKey []byte
+	valid := false
 	if masterKeyStr != "" {
 		parsedKey, err := hex.DecodeString(masterKeyStr)
 		if err == nil && len(parsedKey) == 32 {
 			masterKey = parsedKey
+			valid = true
 		} else {
-			slog.Warn("MASTER_KEY is not a valid 32-byte hex string, falling back to secure random key")
+			slog.Warn("MASTER_KEY is not a valid 32-byte hex string")
 		}
+	}
+
+	// A random per-boot key silently makes every stored secret unrecoverable
+	// after restart. In production that is data loss, so refuse to start
+	// instead of degrading. The random fallback exists only for local dev.
+	if !valid && strings.EqualFold(env, "production") {
+		slog.Error("MASTER_KEY is missing or not a valid 32-byte hex string; refusing to start in production (stored secrets would be unrecoverable after restart)")
+		os.Exit(1)
 	}
 	if len(masterKey) != 32 {
 		masterKey = make([]byte, 32)
@@ -88,7 +98,9 @@ func Load() *Config {
 			os.Exit(1)
 		}
 		if masterKeyStr == "" {
-			slog.Info("MASTER_KEY is unset, using secure random key for session")
+			slog.Info("MASTER_KEY is unset, using secure random key for this dev session")
+		} else {
+			slog.Warn("MASTER_KEY is not a valid 32-byte hex string, using secure random key for this dev session")
 		}
 	}
 
