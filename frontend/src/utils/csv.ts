@@ -5,10 +5,18 @@
  */
 
 function escapeCell(input: string): string {
-  if (input.includes('"') || input.includes(',') || input.includes('\n') || input.includes('\r')) {
-    return `"${input.replace(/"/g, '""')}"`;
+  let safe = input;
+  // Spreadsheet formula injection: a leading =, +, -, @, tab, or CR makes
+  // Excel/Sheets/LibreOffice evaluate the cell as a formula. Prefix with a
+  // single quote (the standard "treat as text" escape) so a secret payload
+  // exported to CSV cannot execute.
+  if (/^[=+\-@\t\r]/.test(safe)) {
+    safe = `'${safe}`;
   }
-  return input;
+  if (safe.includes('"') || safe.includes(',') || safe.includes('\n') || safe.includes('\r')) {
+    return `"${safe.replace(/"/g, '""')}"`;
+  }
+  return safe;
 }
 
 export function buildCsv(headers: readonly string[], rows: readonly (readonly string[])[]): string {
