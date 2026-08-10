@@ -35,7 +35,10 @@ var (
 
 const (
 	maxSecrets	= 1000
-	maxPayload	= 15 * 1024 * 1024
+	// 48MB: the largest stored payload the frontend can produce is the bundle for
+	// a 30MB attachment (~40MB after base64 expansion). Sized above that to leave
+	// headroom; must stay in sync with api.maxRequestBody (handlers.go).
+	maxPayload	= 48 * 1024 * 1024
 )
 
 // MaxSecrets returns the hard cap on concurrently stored secrets. Exposed so
@@ -334,7 +337,7 @@ func generateID() (string, error) {
 
 func (s *Storage) Store(payload []byte, expiryHours int, viewLimit int, alias string, unlockAt *time.Time) (string, string, error) {
 	if len(payload) > maxPayload {
-		return "", "", errors.New("payload exceeds maximum allowed size (15MB)")
+		return "", "", errors.New("payload exceeds maximum allowed size")
 	}
 
 	encPayload, err := encryptPayload(payload, s.masterKey)

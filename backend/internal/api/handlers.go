@@ -25,7 +25,12 @@ import (
 
 const (
 	adminKeyHeader = "X-Admin-Key"
-	maxRequestBody = 15 * 1024 * 1024
+	// 56MB: the frontend advertises a 30MB combined file limit. File bytes are
+	// base64-encoded twice in flight (~1.78x total — ciphertext to string, then
+	// the payload bundle to string), so a 30MB file peaks near 53.3MB of body.
+	// Must stay in sync with store.maxPayload (storage.go), which limits what is
+	// actually persisted (the stored bundle for 30MB is ~40MB).
+	maxRequestBody = 56 * 1024 * 1024
 )
 
 type API struct {
@@ -319,7 +324,7 @@ func (api *API) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	if err := dec.Decode(&req); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
-			writeError(w, http.StatusRequestEntityTooLarge, "payload exceeds 15MB")
+			writeError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("payload exceeds %dMB", maxRequestBody/(1024*1024)))
 			return
 		}
 		writeError(w, http.StatusBadRequest, "invalid request body")

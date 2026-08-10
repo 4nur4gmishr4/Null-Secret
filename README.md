@@ -44,7 +44,7 @@ and deletes it the moment it expires or hits its view limit.
   Once that limit is reached, the message is gone forever.
 - Optional second password the recipient must type, derived through
   PBKDF2-SHA256 with 600 000 iterations.
-- Optional **file attachments** up to 10 MB combined, packed into a Zip
+- Optional **file attachments** up to 30 MB combined, packed into a Zip
   inside the encrypted blob, never seen by the server.
 - Optional Firebase **sign-in** that adds a 30-secret-per-day cap and a
   history page that lists only IDs and timestamps (never message content).

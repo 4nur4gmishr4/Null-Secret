@@ -33,7 +33,7 @@ The system is divided by several critical trust boundaries:
 ### 5. Denial of Service (Crashing or exhausting the system)
 - **Attack:** An attacker uploads massive payloads to exhaust the server's RAM (OOM kill) or disk space.
 - **Mitigation:**
-  - **RAM Exhaustion:** The Go backend enforces a strict 15 MB `maxRequestBody` limit middleware on the `/api/v1/secret` endpoint. Requests exceeding this are dropped before the body is fully parsed.
+  - **RAM Exhaustion:** The Go backend enforces a strict 56 MB `maxRequestBody` limit middleware on the `/api/v1/secret` endpoint. Requests exceeding this are dropped before the body is fully parsed.
   - **Disk Exhaustion:** Secrets are automatically garbage collected. A background goroutine sweeps the SQLite database every 60 seconds and permanently deletes any secrets whose `expiresAt` timestamp has passed or whose `views >= viewLimit`. 
 
 ### 6. Elevation of Privilege (Gaining unauthorized capabilities)

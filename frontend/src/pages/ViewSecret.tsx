@@ -2,11 +2,49 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import LottieView from '../components/LottieView';
-import { deriveKeyFromPassword, importKey, decrypt, unbundle } from '../utils/crypto';
+import { deriveKeyFromPassword, importKey, decrypt, decryptBytes, unbundle, bytesToBase64 } from '../utils/crypto';
 import { API_BASE } from '../utils/api';
 import shieldMorphData from '../assets/lotties/shield-morph.json';
 import redsecurityData from '../assets/lotties/redsecurity.json';
 import privacylockData from '../assets/lotties/privacylock.json';
+
+/**
+ * File attachment plaintext layout, mirrored from Home.tsx's encryptFilePayload:
+ *   [4-byte big-endian header length][UTF-8 header JSON][file bytes]
+ * A legacy string envelope decrypts to bytes starting with '{' (0x7B), which
+ * reads as a header length far larger than the payload — so this returns null
+ * and the caller falls back to the old JSON/text path.
+ */
+const HEADER_LENGTH_BYTES = 4;
+
+interface FilePayload {
+  text: string;
+  file: { name: string; type: string; data: string };
+}
+
+function parseFilePayload(bytes: Uint8Array): FilePayload | null {
+  if (bytes.byteLength < HEADER_LENGTH_BYTES + 1) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const headerLength = view.getUint32(0, false);
+  if (headerLength === 0 || headerLength + HEADER_LENGTH_BYTES > bytes.byteLength) return null;
+
+  let header: unknown;
+  try {
+    header = JSON.parse(new TextDecoder().decode(bytes.subarray(HEADER_LENGTH_BYTES, HEADER_LENGTH_BYTES + headerLength)));
+  } catch {
+    return null;
+  }
+  if (header === null || typeof header !== 'object') return null;
+
+  const { text, name, type } = header as { text?: unknown; name?: unknown; type?: unknown };
+  if (typeof name !== 'string' || typeof type !== 'string') return null;
+
+  const fileBytes = bytes.subarray(HEADER_LENGTH_BYTES + headerLength);
+  return {
+    text: typeof text === 'string' ? text : '',
+    file: { name, type, data: `data:${type || 'application/octet-stream'};base64,${bytesToBase64(fileBytes)}` },
+  };
+}
 
 const ViewSecret: React.FC = () => {
   const { id } = useParams();
@@ -66,25 +104,42 @@ const ViewSecret: React.FC = () => {
         }
         key = await deriveKeyFromPassword(pass, salt);
       }
-      const plaintext = await decrypt(data.p, data.i, key);
-      try {
-        const parsed: unknown = JSON.parse(plaintext);
-        if (
-          parsed !== null &&
-          typeof parsed === 'object' &&
-          ('text' in parsed || 'file' in parsed)
-        ) {
-          const envelope = parsed as { text?: unknown; file?: { name: string; type: string; data: string } };
-          setDecrypted(typeof envelope.text === 'string' ? envelope.text : '');
-          if (envelope.file) {
-            setFileData(envelope.file);
+      let text: string | null = null;
+      let file: { name: string; type: string; data: string } | null = null;
+
+      // New binary format first (encryptFilePayload in Home.tsx). decryptBytes
+      // also succeeds for legacy secrets, so parseFilePayload must reject them —
+      // legacy plaintext starts with '{' (0x7B), an implausible header length —
+      // and we fall back to the old JSON/text envelope below.
+      const bytes = await decryptBytes(data.p, data.i, key);
+      const parsedFile = parseFilePayload(bytes);
+      if (parsedFile) {
+        text = parsedFile.text;
+        file = parsedFile.file;
+      } else {
+        const plaintext = await decrypt(data.p, data.i, key);
+        try {
+          const parsed: unknown = JSON.parse(plaintext);
+          if (
+            parsed !== null &&
+            typeof parsed === 'object' &&
+            ('text' in parsed || 'file' in parsed)
+          ) {
+            const envelope = parsed as { text?: unknown; file?: { name: string; type: string; data: string } };
+            text = typeof envelope.text === 'string' ? envelope.text : '';
+            if (envelope.file) {
+              file = envelope.file;
+            }
+          } else {
+            text = plaintext;
           }
-        } else {
-          setDecrypted(plaintext);
+        } catch {
+          text = plaintext;
         }
-      } catch {
-        setDecrypted(plaintext);
       }
+
+      setDecrypted(text);
+      if (file) setFileData(file);
     } catch (err: unknown) {
       console.error('decrypt failed', err);
       setError('We could not unlock this message. The password might be wrong, or the link might be incomplete.');
