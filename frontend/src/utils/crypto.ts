@@ -188,7 +188,9 @@ export interface SecretBundle {
 }
 
 export function bundle(payload: string, iv: string, salt?: string): string {
-  const value: SecretBundle = { p: payload, i: iv, s: salt };
+  // exactOptionalPropertyTypes: never write `s: undefined` into the bundle —
+  // an absent salt must stay absent so unbundle's shape check stays strict.
+  const value: SecretBundle = salt === undefined ? { p: payload, i: iv } : { p: payload, i: iv, s: salt };
   return btoa(JSON.stringify(value));
 }
 
