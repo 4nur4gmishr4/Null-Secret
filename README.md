@@ -91,4 +91,8 @@ See the `docs/` directory for detailed specifications:
 
 ## License
 
+<div align="center">
+  <img src="docs/assets/license.svg" alt="Proprietary License Status" width="100%" />
+</div>
+
 Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
