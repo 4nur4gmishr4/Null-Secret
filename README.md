@@ -1,5 +1,9 @@
 # Null-Secret
 
+<div align="center">
+  <img src="docs/assets/hero-ui.svg" alt="Null-Secret App Interface" width="100%" />
+</div>
+
 Null-Secret is an ephemeral sharing application. The browser encrypts text and file payloads before transmitting them. The backend stores the encrypted data and serves it through a REST API. Secrets delete automatically when they reach a view limit or a time limit.
 
 ## Implementation Overview

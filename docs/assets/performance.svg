@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; fill: #FAFAFA; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0A0A0A; }
+    .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; }
+    .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 16px; }
+    .text-secondary { fill: #A1A1A1; font-size: 13px; }
+    .text-tertiary { fill: #6B6B6B; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .stat-val { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 500; fill: #FAFAFA; }
+    
+    .gauge-track { fill: none; stroke: #1A1A1A; stroke-width: 8; stroke-linecap: butt; }
+    .gauge-fill { fill: none; stroke: #FAFAFA; stroke-width: 8; stroke-linecap: butt; }
+    
+    .anim-fill-1 { animation: fill1 2s cubic-bezier(0.4, 0, 0.2, 1) forwards infinite alternate; }
+    .anim-fill-2 { animation: fill2 2s cubic-bezier(0.4, 0, 0.2, 1) forwards infinite alternate; animation-delay: 0.5s; }
+    .anim-fill-3 { animation: fill3 2s cubic-bezier(0.4, 0, 0.2, 1) forwards infinite alternate; animation-delay: 1s; }
+
+    @keyframes fill1 { 0% { stroke-dasharray: 0 100; } 100% { stroke-dasharray: 75 100; } }
+    @keyframes fill2 { 0% { stroke-dasharray: 0 100; } 100% { stroke-dasharray: 30 100; } }
+    @keyframes fill3 { 0% { stroke-dasharray: 0 100; } 100% { stroke-dasharray: 90 100; } }
+  </style>
+
+  <rect class="bg" width="800" height="400" />
+  <text x="400" y="40" text-anchor="middle" class="text-tertiary" font-size="14">API Rate Limits &amp; Constraints</text>
+
+  <!-- Global Limiter -->
+  <rect class="card" x="60" y="100" width="200" height="240" />
+  <rect x="60" y="100" width="200" height="40" fill="#1A1A1A" stroke="#1F1F1F" stroke-width="1" />
+  <text x="160" y="125" text-anchor="middle" class="text-tertiary">Global Limiter</text>
+  
+  <circle cx="160" cy="210" r="40" class="gauge-track" />
+  <circle cx="160" cy="210" r="40" class="gauge-fill anim-fill-1" stroke-dasharray="0 100" transform="rotate(-90 160 210)" />
+  <text x="160" y="222" text-anchor="middle" class="stat-val">100</text>
+  <text x="160" y="290" text-anchor="middle" class="text-secondary">req / sec</text>
+  <text x="160" y="310" text-anchor="middle" class="text-tertiary">Token Bucket</text>
+
+  <!-- Per-IP Limiter -->
+  <rect class="card" x="300" y="100" width="200" height="240" />
+  <rect x="300" y="100" width="200" height="40" fill="#1A1A1A" stroke="#1F1F1F" stroke-width="1" />
+  <text x="400" y="125" text-anchor="middle" class="text-tertiary">IP Limiter</text>
+  
+  <circle cx="400" cy="210" r="40" class="gauge-track" />
+  <circle cx="400" cy="210" r="40" class="gauge-fill anim-fill-2" stroke-dasharray="0 100" transform="rotate(-90 400 210)" />
+  <text x="400" y="222" text-anchor="middle" class="stat-val">20</text>
+  <text x="400" y="290" text-anchor="middle" class="text-secondary">req / min</text>
+  <text x="400" y="310" text-anchor="middle" class="text-tertiary">IPv6 /64 Prefix</text>
+
+  <!-- Payload Limit -->
+  <rect class="card" x="540" y="100" width="200" height="240" />
+  <rect x="540" y="100" width="200" height="40" fill="#1A1A1A" stroke="#1F1F1F" stroke-width="1" />
+  <text x="640" y="125" text-anchor="middle" class="text-tertiary">Payload Limit</text>
+  
+  <circle cx="640" cy="210" r="40" class="gauge-track" />
+  <circle cx="640" cy="210" r="40" class="gauge-fill anim-fill-3" stroke-dasharray="0 100" transform="rotate(-90 640 210)" />
+  <text x="640" y="222" text-anchor="middle" class="stat-val">56</text>
+  <text x="640" y="290" text-anchor="middle" class="text-secondary">MB Max Body</text>
+  <text x="640" y="310" text-anchor="middle" class="text-tertiary">http.MaxBytesReader</text>
+
+</svg>

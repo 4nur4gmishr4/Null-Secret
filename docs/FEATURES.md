@@ -1,5 +1,9 @@
 # Features
 
+<div align="center">
+  <img src="assets/features.svg" alt="Features Overview Diagram" width="100%" />
+</div>
+
 This document details the implemented features of Null-Secret and their constraints, followed by planned modifications.
 
 ## Core Capabilities

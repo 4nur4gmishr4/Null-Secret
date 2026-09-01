@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="100%" height="100%">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; fill: #FAFAFA; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0A0A0A; }
+    .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; }
+    .card-elevated { fill: #1A1A1A; stroke: #333333; stroke-width: 1; }
+    .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 14px; }
+    .text-secondary { fill: #A1A1A1; font-size: 13px; }
+    .text-tertiary { fill: #6B6B6B; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .pk { font-weight: 700; fill: #FAFAFA; }
+    .row-line { stroke: #1F1F1F; stroke-width: 1; }
+    .row-highlight { fill: #1A1A1A; opacity: 0; animation: flash 4s infinite; }
+    
+    @keyframes flash { 0% { opacity: 0; } 10% { opacity: 1; } 20% { opacity: 0; } 100% { opacity: 0; } }
+  </style>
+
+  <rect class="bg" width="800" height="440" />
+  <text x="400" y="40" text-anchor="middle" class="text-tertiary" font-size="14">SQLite Database Schema (WAL Mode)</text>
+
+  <rect class="card" x="100" y="80" width="600" height="300" />
+  <rect class="card-elevated" x="100" y="80" width="600" height="40" />
+  <text x="400" y="105" text-anchor="middle" class="text-tertiary">TABLE: secrets</text>
+
+  <!-- Row 1 -->
+  <rect class="row-highlight" x="100" y="120" width="600" height="38" style="animation-delay: 0s;" />
+  <line x1="100" y1="120" x2="700" y2="120" class="row-line" />
+  <text x="120" y="145" class="pk mono">id</text>
+  <text x="300" y="145" class="text-secondary mono">TEXT PRIMARY KEY</text>
+  <text x="500" y="145" class="text-secondary">Random a1b2c3d4</text>
+
+  <!-- Row 2 -->
+  <rect class="row-highlight" x="100" y="158" width="600" height="38" style="animation-delay: 0.5s;" />
+  <line x1="100" y1="158" x2="700" y2="158" class="row-line" />
+  <text x="120" y="183" class="mono text-primary">admin_key</text>
+  <text x="300" y="183" class="text-secondary mono">TEXT</text>
+  <text x="500" y="183" class="text-secondary">SHA-256 hash</text>
+
+  <!-- Row 3 -->
+  <rect class="row-highlight" x="100" y="196" width="600" height="38" style="animation-delay: 1s;" />
+  <line x1="100" y1="196" x2="700" y2="196" class="row-line" />
+  <text x="120" y="221" class="mono text-primary">data</text>
+  <text x="300" y="221" class="text-secondary mono">BLOB</text>
+  <text x="500" y="221" class="text-secondary">"v1:" || AES-GCM Ciphertext</text>
+
+  <!-- Row 4 -->
+  <rect class="row-highlight" x="100" y="234" width="600" height="38" style="animation-delay: 1.5s;" />
+  <line x1="100" y1="234" x2="700" y2="234" class="row-line" />
+  <text x="120" y="259" class="mono text-primary">created_at</text>
+  <text x="300" y="259" class="text-secondary mono">DATETIME</text>
+  <text x="500" y="259" class="text-secondary">DEFAULT CURRENT_TIMESTAMP</text>
+
+  <!-- Row 5 -->
+  <rect class="row-highlight" x="100" y="272" width="600" height="38" style="animation-delay: 2s;" />
+  <line x1="100" y1="272" x2="700" y2="272" class="row-line" />
+  <text x="120" y="297" class="mono text-primary">expires_at</text>
+  <text x="300" y="297" class="text-secondary mono">DATETIME</text>
+  <text x="500" y="297" class="text-secondary">Indexed for GC Sweeping</text>
+
+  <!-- Row 6 -->
+  <rect class="row-highlight" x="100" y="310" width="600" height="38" style="animation-delay: 2.5s;" />
+  <line x1="100" y1="310" x2="700" y2="310" class="row-line" />
+  <text x="120" y="335" class="mono text-primary">view_limit</text>
+  <text x="300" y="335" class="text-secondary mono">INTEGER</text>
+  <text x="500" y="335" class="text-secondary">Max allowed views</text>
+
+  <!-- Row 7 -->
+  <rect class="row-highlight" x="100" y="348" width="600" height="32" style="animation-delay: 3s;" />
+  <line x1="100" y1="348" x2="700" y2="348" class="row-line" />
+  <text x="120" y="368" class="mono text-primary">views</text>
+  <text x="300" y="368" class="text-secondary mono">INTEGER</text>
+  <text x="500" y="368" class="text-secondary">DEFAULT 0</text>
+
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; fill: #FAFAFA; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0A0A0A; }
+    .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; }
+    .card-elevated { fill: #1A1A1A; stroke: #333333; stroke-width: 1; }
+    .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 16px; }
+    .text-secondary { fill: #A1A1A1; font-size: 13px; }
+    .text-tertiary { fill: #6B6B6B; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .text-success { fill: #4ADE80; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    
+    .scanline { fill: rgba(250, 250, 250, 0.05); animation: scan 3s linear infinite; }
+    .beam { fill: #1A1A1A; stroke: #333333; stroke-width: 1; animation: glow 2s ease-in-out infinite alternate; }
+    
+    @keyframes scan { 0% { y: 80; opacity: 1; } 100% { y: 280; opacity: 0; } }
+    @keyframes glow { 0% { stroke: #1F1F1F; } 100% { stroke: #6B6B6B; } }
+  </style>
+
+  <rect class="bg" width="800" height="400" />
+  <text x="400" y="40" text-anchor="middle" class="text-tertiary" font-size="14">Security &amp; Vulnerability Policy</text>
+
+  <!-- Security Checklist -->
+  <rect class="card" x="60" y="80" width="320" height="260" />
+  <rect class="card-elevated" x="60" y="80" width="320" height="40" />
+  <text x="220" y="105" text-anchor="middle" class="text-tertiary">System Security Baseline</text>
+  
+  <text x="80" y="150" class="text-success">[ OK ]</text> <text x="140" y="150" class="text-secondary mono">AES-256-GCM End-to-End</text>
+  <text x="80" y="180" class="text-success">[ OK ]</text> <text x="140" y="180" class="text-secondary mono">Subresource Integrity (SRI)</text>
+  <text x="80" y="210" class="text-success">[ OK ]</text> <text x="140" y="210" class="text-secondary mono">Strict Content Security Policy</text>
+  <text x="80" y="240" class="text-success">[ OK ]</text> <text x="140" y="240" class="text-secondary mono">Token Bucket Rate Limiting</text>
+  <text x="80" y="270" class="text-success">[ OK ]</text> <text x="140" y="270" class="text-secondary mono">Automated TTL GC Sweeper</text>
+  <text x="80" y="300" class="text-success">[ OK ]</text> <text x="140" y="300" class="text-secondary mono">Zero-Knowledge Storage</text>
+
+  <rect class="scanline" x="60" y="80" width="320" height="40" />
+
+  <!-- Reporting Workflow -->
+  <rect class="card" x="420" y="80" width="320" height="260" />
+  <rect class="card-elevated" x="420" y="80" width="320" height="40" />
+  <text x="580" y="105" text-anchor="middle" class="text-tertiary">Incident Reporting Flow</text>
+
+  <rect class="beam" x="440" y="140" width="280" height="44" />
+  <text x="460" y="160" class="text-primary">1. Private Disclosure</text>
+  <text x="460" y="175" class="text-tertiary">anurag.mishra.core@gmail.com</text>
+
+  <rect class="beam" style="animation-delay: 0.3s;" x="440" y="200" width="280" height="44" />
+  <text x="460" y="220" class="text-primary">2. Triage &amp; Evaluation</text>
+  <text x="460" y="235" class="text-tertiary">Within 48 Hours</text>
+
+  <rect class="beam" style="animation-delay: 0.6s;" x="440" y="260" width="280" height="44" />
+  <text x="460" y="280" class="text-primary">3. Coordinated Patch</text>
+  <text x="460" y="295" class="text-tertiary">Public Advisory Published</text>
+
+</svg>

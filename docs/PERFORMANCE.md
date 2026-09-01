@@ -1,5 +1,9 @@
 # Performance
 
+<div align="center">
+  <img src="assets/performance.svg" alt="Performance and Rate Limits Diagram" width="100%" />
+</div>
+
 This document records the exact capacity limits and scaling behaviors of Null-Secret. The architecture prioritizes predictable memory usage and denial-of-service resilience over unbounded throughput.
 
 ## Configured Limits

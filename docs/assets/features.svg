@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; fill: #FAFAFA; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0A0A0A; }
+    .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; transition: all 0.3s ease; }
+    .card:hover { fill: #1A1A1A; stroke: #333333; }
+    .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 16px; }
+    .text-secondary { fill: #A1A1A1; font-size: 13px; }
+    .text-tertiary { fill: #6B6B6B; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    
+    .icon { fill: none; stroke: #FAFAFA; stroke-width: 1.5; stroke-linecap: square; }
+    .anim-pulse { animation: pulse 2s infinite ease-in-out; }
+    .anim-spin { animation: spin 4s infinite linear; transform-origin: center; }
+    .anim-bounce { animation: bounce 2s infinite ease-in-out; }
+
+    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  </style>
+
+  <rect class="bg" width="800" height="400" />
+  <text x="400" y="40" text-anchor="middle" class="text-tertiary" font-size="14">Core Platform Features</text>
+
+  <!-- Feature 1: Zero Knowledge -->
+  <rect class="card" x="60" y="80" width="210" height="130" />
+  <g class="anim-pulse" transform="translate(90, 110)">
+    <circle cx="0" cy="0" r="12" class="icon" />
+    <circle cx="0" cy="0" r="4" fill="#FAFAFA" />
+  </g>
+  <text x="120" y="115" class="text-primary">Zero-Knowledge</text>
+  <text x="80" y="150" class="text-secondary">Keys never leave your</text>
+  <text x="80" y="170" class="text-secondary">browser environment.</text>
+
+  <!-- Feature 2: Self Destruct -->
+  <rect class="card" x="295" y="80" width="210" height="130" />
+  <g class="anim-bounce" transform="translate(325, 110)">
+    <path d="M-8,-8 L8,8 M8,-8 L-8,8" class="icon" />
+  </g>
+  <text x="355" y="115" class="text-primary">Self-Destruct</text>
+  <text x="315" y="150" class="text-secondary">Burns on view or</text>
+  <text x="315" y="170" class="text-secondary">after expiration.</text>
+
+  <!-- Feature 3: File Attachments -->
+  <rect class="card" x="530" y="80" width="210" height="130" />
+  <g transform="translate(560, 110)">
+    <rect x="-8" y="-10" width="16" height="20" class="icon" />
+    <path d="M-3,-5 L3,-5 M-3,0 L3,0 M-3,5 L3,5" class="icon" stroke-width="1" />
+  </g>
+  <text x="590" y="115" class="text-primary">File Attachments</text>
+  <text x="550" y="150" class="text-secondary">Attach files up to</text>
+  <text x="550" y="170" class="text-secondary mono">30MB combined size.</text>
+
+  <!-- Feature 4: Access Control -->
+  <rect class="card" x="60" y="230" width="327" height="130" />
+  <g transform="translate(90, 260)">
+    <rect x="-10" y="-2" width="20" height="14" class="icon" />
+    <path d="M-6,-2 L-6,-8 A6,6 0 0,1 6,-8 L6,-2" class="icon" />
+  </g>
+  <text x="120" y="265" class="text-primary">Access Control</text>
+  <text x="80" y="300" class="text-secondary">Protect shareable links</text>
+  <text x="80" y="320" class="text-secondary">with an additional password.</text>
+
+  <!-- Feature 5: Auditing -->
+  <rect class="card" x="413" y="230" width="327" height="130" />
+  <g class="anim-spin" transform="translate(443, 260)">
+    <path d="M0,-12 L0,-8 M0,12 L0,8 M12,0 L8,0 M-12,0 L-8,0 M8.5,-8.5 L5.5,-5.5 M-8.5,8.5 L-5.5,5.5 M8.5,8.5 L5.5,5.5 M-8.5,-8.5 L-5.5,-5.5" class="icon" stroke-width="2" />
+    <circle cx="0" cy="0" r="4" class="icon" />
+  </g>
+  <text x="473" y="265" class="text-primary">Firebase Auditing</text>
+  <text x="433" y="300" class="text-secondary">Detailed history logs of when</text>
+  <text x="433" y="320" class="text-secondary">secrets were viewed/destroyed.</text>
+
+</svg>

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; fill: #FAFAFA; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0A0A0A; }
+    .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; }
+    .card-elevated { fill: #1A1A1A; stroke: #333333; stroke-width: 1; }
+    .card-accent { fill: #FAFAFA; }
+    .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 16px; }
+    .text-secondary { fill: #A1A1A1; font-size: 13px; }
+    .text-tertiary { fill: #6B6B6B; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .text-dark { fill: #0A0A0A; font-weight: 700; font-size: 14px; }
+    
+    .dashed-path { fill: none; stroke: #333333; stroke-width: 1.5; stroke-dasharray: 4; }
+    .solid-path { fill: none; stroke: #1F1F1F; stroke-width: 2; }
+    .packet { fill: #FAFAFA; animation: flow 3s linear infinite; }
+    .gear { animation: spin 4s linear infinite; transform-origin: 400px 150px; }
+
+    @keyframes flow {
+      0% { offset-distance: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { offset-distance: 100%; opacity: 0; }
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+
+  <rect class="bg" width="800" height="400" />
+  <text x="400" y="40" text-anchor="middle" class="text-tertiary" font-size="14">Cryptography Pipeline</text>
+
+  <!-- Input Phase -->
+  <rect class="card" x="60" y="100" width="160" height="50" />
+  <text x="140" y="125" text-anchor="middle" class="text-primary">Plaintext</text>
+  <text x="140" y="142" text-anchor="middle" class="text-secondary mono" font-size="10">UTF-8 Encoded</text>
+
+  <rect class="card" x="60" y="220" width="160" height="50" />
+  <text x="140" y="245" text-anchor="middle" class="text-primary">Password</text>
+  <text x="140" y="262" text-anchor="middle" class="text-secondary mono" font-size="10">(Optional)</text>
+
+  <!-- KDF Phase -->
+  <rect class="card-elevated" x="280" y="210" width="160" height="70" />
+  <text x="360" y="240" text-anchor="middle" class="text-primary">PBKDF2</text>
+  <text x="360" y="260" text-anchor="middle" class="text-secondary mono" font-size="10">HMAC-SHA256, 600k iter</text>
+
+  <!-- Encryption Phase -->
+  <rect class="card-accent" x="280" y="90" width="160" height="70" />
+  <text x="360" y="125" text-anchor="middle" class="text-dark">AES-256-GCM</text>
+  <text x="360" y="145" text-anchor="middle" fill="#333333" class="mono" font-size="10">Web Crypto API</text>
+  
+  <!-- Output Phase -->
+  <rect class="card" x="520" y="90" width="180" height="70" />
+  <text x="610" y="120" text-anchor="middle" class="text-primary">Ciphertext Blob</text>
+  <text x="610" y="140" text-anchor="middle" class="text-secondary mono" font-size="10">{ p, i, s? }</text>
+  <text x="610" y="155" text-anchor="middle" class="text-tertiary">Base64 Encoded</text>
+
+  <rect class="card" x="520" y="220" width="180" height="50" />
+  <text x="610" y="245" text-anchor="middle" class="text-primary">Raw AES Key</text>
+  <text x="610" y="262" text-anchor="middle" class="text-secondary mono" font-size="10">256-bit Random Array</text>
+
+  <!-- Connecting Lines -->
+  <!-- Plaintext to AES -->
+  <path id="path-pt" class="solid-path" d="M 220 125 L 280 125" />
+  <circle r="3" class="packet"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#path-pt"/></animateMotion></circle>
+  
+  <!-- Password to PBKDF2 -->
+  <path id="path-pw" class="solid-path" d="M 220 245 L 280 245" />
+  <circle r="3" class="packet"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#path-pw"/></animateMotion></circle>
+
+  <!-- PBKDF2 to AES -->
+  <path id="path-kdf" class="solid-path" d="M 360 210 L 360 160" />
+  <circle r="3" class="packet"><animateMotion dur="1s" repeatCount="indefinite"><mpath href="#path-kdf"/></animateMotion></circle>
+
+  <!-- AES to Blob -->
+  <path id="path-out" class="solid-path" d="M 440 125 L 520 125" />
+  <circle r="3" class="packet"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#path-out"/></animateMotion></circle>
+  
+  <!-- PBKDF2 to Raw Key (or random generation) -->
+  <path class="dashed-path" d="M 440 245 L 520 245" />
+
+</svg>

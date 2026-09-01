@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; fill: #FAFAFA; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0A0A0A; }
+    .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; }
+    .card-elevated { fill: #1A1A1A; stroke: #333333; stroke-width: 1; }
+    .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 16px; }
+    .text-secondary { fill: #A1A1A1; font-size: 13px; }
+    .text-tertiary { fill: #6B6B6B; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .text-danger { fill: #F87171; }
+    
+    .boundary { fill: none; stroke: #333333; stroke-width: 2; stroke-dasharray: 8; animation: march 3s linear infinite; }
+    .secure-boundary { stroke: #4ADE80; stroke-width: 1; }
+    .untrusted-boundary { stroke: #F87171; stroke-width: 1; }
+
+    @keyframes march {
+      from { stroke-dashoffset: 0; }
+      to { stroke-dashoffset: -32; }
+    }
+  </style>
+
+  <rect class="bg" width="800" height="400" />
+  <text x="400" y="40" text-anchor="middle" class="text-tertiary" font-size="14">Zero-Knowledge Threat Model</text>
+
+  <!-- Trusted Boundary -->
+  <rect class="boundary secure-boundary" x="40" y="80" width="340" height="280" />
+  <rect class="card-elevated" x="40" y="80" width="340" height="40" stroke="#4ADE80" stroke-width="1" />
+  <text x="210" y="105" text-anchor="middle" class="text-primary" fill="#4ADE80">TRUSTED: Client Environment</text>
+
+  <rect class="card" x="60" y="140" width="300" height="50" />
+  <text x="210" y="165" text-anchor="middle" class="text-secondary mono">Key Generation (CSPRNG)</text>
+
+  <rect class="card" x="60" y="210" width="300" height="50" />
+  <text x="210" y="235" text-anchor="middle" class="text-secondary mono">Web Crypto AES-256-GCM</text>
+
+  <rect class="card" x="60" y="280" width="300" height="50" />
+  <text x="210" y="305" text-anchor="middle" class="text-secondary mono">URL Fragment Management</text>
+
+  <!-- Untrusted Boundary -->
+  <rect class="boundary untrusted-boundary" x="420" y="80" width="340" height="280" />
+  <rect fill="#1C1412" stroke="#F87171" stroke-width="1" x="420" y="80" width="340" height="40" />
+  <text x="590" y="105" text-anchor="middle" class="text-primary" fill="#F87171">UNTRUSTED: Server Infrastructure</text>
+
+  <rect class="card" x="440" y="140" width="300" height="50" />
+  <text x="590" y="165" text-anchor="middle" class="text-secondary mono">SQLite Ciphertext Storage</text>
+
+  <rect class="card" x="440" y="210" width="300" height="50" />
+  <text x="590" y="235" text-anchor="middle" class="text-secondary mono">API Handlers &amp; Rate Limiters</text>
+
+  <rect class="card" x="440" y="280" width="300" height="50" />
+  <text x="590" y="305" text-anchor="middle" class="text-secondary mono">Firebase Auth Metadata</text>
+
+  <!-- Network Line -->
+  <path class="boundary" d="M 380 200 L 420 200" stroke="#6B6B6B" />
+  <text x="400" y="190" text-anchor="middle" class="text-tertiary">HTTPS</text>
+
+</svg>

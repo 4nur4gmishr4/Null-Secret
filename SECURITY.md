@@ -1,5 +1,9 @@
 # Security Policy
 
+<div align="center">
+  <img src="docs/assets/security.svg" alt="Security Policy Diagram" width="100%" />
+</div>
+
 Null-Secret relies on verifiable encryption to protect user data. We consider the server infrastructure untrustworthy.
 
 ## Reporting a Vulnerability

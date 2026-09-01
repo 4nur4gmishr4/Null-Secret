@@ -1,5 +1,9 @@
 # Cryptography Specification
 
+<div align="center">
+  <img src="assets/crypto-flow.svg" alt="Cryptography Pipeline Diagram" width="100%" />
+</div>
+
 This document details the exact cryptographic implementations in Null-Secret. The codebase applies encryption twice: once in the browser (`frontend/src/utils/crypto.ts`) and once in the backend (`backend/internal/store/storage.go`).
 
 ## Browser Encryption

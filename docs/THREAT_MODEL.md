@@ -1,5 +1,9 @@
 # Threat Model
 
+<div align="center">
+  <img src="assets/threat-model.svg" alt="Threat Model Diagram" width="100%" />
+</div>
+
 This document outlines the security assumptions, assets, actors, and mitigations defining the Null-Secret architecture. It employs the STRIDE methodology (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to evaluate risks.
 
 ## Assumptions and Boundaries

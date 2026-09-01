@@ -4,20 +4,9 @@ This document describes the structure of Null-Secret and the constraints it oper
 
 ## Topology
 
-```text
-┌─────────────────────────┐        HTTPS         ┌──────────────────────────┐
-│   Browser (SPA)         │ ───────────────────▶ │   Go API (chi router)    │
-│   React 19 + Vite       │ ◀─────────────────── │   :8080                  │
-│   Firebase Auth client  │        JSON          │   SQLite (WAL)           │
-└───────┬─────────────────┘                      └────────┬─────────────────┘
-        │                                                 │
-        │ (Firebase SDK)                                  │ (local file I/O)
-        ▼                                                 ▼
-┌─────────────────────────┐                      ┌──────────────────────────┐
-│   Firebase Auth         │                      │   nullsecret.db          │
-│   Firestore             │                      │   backup.db (5 min)      │
-└─────────────────────────┘                      └──────────────────────────┘
-```
+<div align="center">
+  <img src="assets/architecture.svg" alt="System Topology Diagram" width="100%" />
+</div>
 
 The browser handles payload encryption. The Go API provides persistence and rate limiting. Firebase provides an optional identity layer to track user quotas. The API does not communicate with Firebase.
 
@@ -72,6 +61,10 @@ The browser handles payload encryption. The Go API provides persistence and rate
 The backend stores data in an embedded SQLite database (`modernc.org/sqlite`).
 
 ### Schema
+
+<div align="center">
+  <img src="assets/database-schema.svg" alt="SQLite Database Schema Diagram" width="100%" />
+</div>
 
 ```sql
 CREATE TABLE IF NOT EXISTS secrets (
