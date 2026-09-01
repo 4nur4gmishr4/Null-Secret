@@ -5,68 +5,89 @@
     .bg { fill: #0A0A0A; }
     .card { fill: #111111; stroke: #1F1F1F; stroke-width: 1; }
     .input { fill: #1A1A1A; stroke: #333333; stroke-width: 1; }
-    .btn { fill: #FAFAFA; transition: all 0.3s ease; }
+    .btn { fill: #FAFAFA; transition: transform 0.3s ease; }
+    .btn:hover { transform: translateY(-2px); }
     .btn-text { fill: #0A0A0A; font-weight: 600; font-size: 14px; }
     .text-primary { fill: #FAFAFA; font-weight: 600; font-size: 24px; letter-spacing: -0.02em; }
     .text-secondary { fill: #A1A1A1; font-size: 14px; }
     .text-tertiary { fill: #6B6B6B; font-size: 13px; }
-    .text-success { fill: #4ADE80; font-size: 12px; font-weight: 500; }
-    .surface-success { fill: #0A1A0F; stroke: #1F1F1F; stroke-width: 1; }
     
     .cursor { animation: blink 1s step-end infinite; }
-    .typewriter-text { overflow: hidden; white-space: nowrap; animation: typing 3s steps(30, end) infinite; }
-    .pulse-glow { animation: soft-pulse 4s ease-in-out infinite alternate; }
-    .slide-up { animation: float-up 6s ease-in-out infinite; }
+    .typewriter-text { overflow: hidden; white-space: nowrap; animation: typing 4s steps(40, end) infinite; }
     
+    /* Subtle unique animation: A very slow, ethereal border gradient effect */
+    .glow-border {
+      fill: none;
+      stroke: url(#subtle-glow);
+      stroke-width: 1;
+      animation: sweep 6s linear infinite;
+    }
+
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    @keyframes typing { 0% { width: 0; opacity: 0; } 10% { width: 0; opacity: 1; } 80% { width: 100%; opacity: 1; } 100% { width: 100%; opacity: 1; } }
-    @keyframes soft-pulse { 0% { stroke: #333333; } 100% { stroke: #6B6B6B; } }
-    @keyframes float-up { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-4px); } }
+    @keyframes typing { 
+      0% { width: 0; opacity: 0; } 
+      10% { width: 0; opacity: 1; } 
+      70% { width: 100%; opacity: 1; } 
+      90% { width: 100%; opacity: 1; }
+      100% { width: 100%; opacity: 0; } 
+    }
+    @keyframes sweep {
+      0% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: -1000; }
+    }
   </style>
+
+  <defs>
+    <linearGradient id="subtle-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F1F1F" />
+      <stop offset="50%" stop-color="#6B6B6B" />
+      <stop offset="100%" stop-color="#1F1F1F" />
+    </linearGradient>
+  </defs>
 
   <!-- Background -->
   <rect class="bg" width="800" height="500" />
 
   <!-- App Window Centered -->
-  <g class="slide-up">
-    <rect class="card pulse-glow" x="100" y="60" width="600" height="380" />
+  <g transform="translate(100, 50)">
+    <rect class="card" x="0" y="0" width="600" height="400" />
+    <!-- Subtle animated border overlay -->
+    <rect class="glow-border" x="0" y="0" width="600" height="400" stroke-dasharray="300 700" />
     
     <!-- Title Bar -->
-    <rect x="100" y="60" width="600" height="40" fill="#0A0A0A" stroke="#1F1F1F" stroke-width="1" />
-    <rect x="115" y="72" width="12" height="12" fill="#333333" />
-    <rect x="135" y="72" width="12" height="12" fill="#333333" />
-    <rect x="155" y="72" width="12" height="12" fill="#333333" />
-    <text x="400" y="85" class="text-tertiary" font-weight="500" text-anchor="middle" font-size="12">NULL-SECRET</text>
+    <rect x="0" y="0" width="600" height="40" fill="#0A0A0A" stroke="#1F1F1F" stroke-width="1" />
+    <rect x="15" y="14" width="12" height="12" fill="#333333" />
+    <rect x="35" y="14" width="12" height="12" fill="#333333" />
+    <rect x="55" y="14" width="12" height="12" fill="#333333" />
+    <text x="300" y="25" class="text-tertiary" font-weight="500" text-anchor="middle" font-size="12">NULL-SECRET</text>
 
     <!-- Main Content -->
-    <text x="140" y="145" class="text-primary">Create a New Secret</text>
-    <text x="140" y="165" class="text-secondary">End-to-end encrypted locally in your browser.</text>
-
-    <!-- Status Badge -->
-    <rect class="surface-success" x="480" y="125" width="180" height="24" />
-    <circle cx="495" cy="137" r="4" fill="#4ADE80" />
-    <text x="510" y="141" class="text-success">Web Crypto API Active</text>
+    <!-- Proper gaps maintained: Title (60) -> Subtitle (80) -> Input (120) -> Options (260) -> Button (330) -->
+    <text x="40" y="90" class="text-primary">Create a New Secret</text>
+    <text x="40" y="115" class="text-secondary">End-to-end encrypted locally in your browser.</text>
 
     <!-- Textarea -->
-    <rect class="input pulse-glow" x="140" y="190" width="520" height="100" />
+    <rect class="input" x="40" y="145" width="520" height="100" />
     
     <!-- Animated Typing Text -->
-    <svg x="155" y="200" width="490" height="20">
-      <text x="0" y="15" class="text-secondary typewriter-text">My ultra secure database credentials...<tspan class="cursor">_</tspan></text>
+    <svg x="55" y="155" width="490" height="20">
+      <text x="0" y="15" class="text-secondary typewriter-text">export DATABASE_URL="postgres://user:pass@host"<tspan class="cursor">_</tspan></text>
     </svg>
-    <text x="155" y="270" class="text-tertiary">Markdown formatting supported.</text>
+    <text x="55" y="225" class="text-tertiary">Markdown formatting supported.</text>
 
     <!-- Options Row -->
-    <rect class="input" x="140" y="310" width="250" height="40" />
-    <text x="155" y="335" class="text-secondary">Expires: 7 Days</text>
-    <path d="M 370 325 L 375 330 L 380 325" fill="none" stroke="#6B6B6B" stroke-width="1.5" />
+    <rect class="input" x="40" y="265" width="250" height="40" />
+    <text x="55" y="290" class="text-secondary">Expires: 7 Days</text>
+    <path d="M 270 280 L 275 285 L 280 280" fill="none" stroke="#6B6B6B" stroke-width="1.5" />
 
-    <rect class="input" x="410" y="310" width="250" height="40" />
-    <text x="425" y="335" class="text-secondary">Limit: 1 View (Burn)</text>
-    <path d="M 640 325 L 645 330 L 650 325" fill="none" stroke="#6B6B6B" stroke-width="1.5" />
+    <rect class="input" x="310" y="265" width="250" height="40" />
+    <text x="325" y="290" class="text-secondary">Limit: 1 View (Burn)</text>
+    <path d="M 540 280 L 545 285 L 550 280" fill="none" stroke="#6B6B6B" stroke-width="1.5" />
 
     <!-- Submit Button -->
-    <rect class="btn" x="140" y="370" width="520" height="44" />
-    <text x="400" y="397" class="btn-text" text-anchor="middle">ENCRYPT &amp; GENERATE LINK</text>
+    <g class="btn">
+      <rect x="40" y="325" width="520" height="44" />
+      <text x="300" y="352" class="btn-text" text-anchor="middle">ENCRYPT &amp; GENERATE LINK</text>
+    </g>
   </g>
 </svg>
