@@ -1,47 +1,81 @@
 # Threat Model
 
-Null-Secret is designed with a **Zero-Knowledge Architecture**. This document outlines our formal threat model using the STRIDE methodology (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to analyze potential attack vectors and how the system mitigates them.
+This document outlines the security assumptions, assets, actors, and mitigations defining the Null-Secret architecture. It employs the STRIDE methodology (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to evaluate risks.
 
-## Trust Boundaries
+## Assumptions and Boundaries
 
-The system is divided by several critical trust boundaries:
-1. **The Client (Browser):** Trusted to perform AES-256-GCM encryption/decryption securely via the Web Crypto API.
-2. **The Transport Layer:** Untrusted network (mitigated by strict TLS/HTTPS requirements).
-3. **The Server (Go API & SQLite):** Untrusted with plaintext data. Trusted only to store ciphertext and enforce rate limits.
-4. **The Database (Firebase Firestore):** Untrusted with ciphertext. Trusted only to store user metadata (Secret IDs and timestamps).
+Null-Secret assumes the network, infrastructure, and backend storage are untrustworthy. 
 
-## STRIDE Analysis
+**Trust Boundaries:**
+- The client browser environment (trusted by the end-user).
+- The network path between the browser and the backend API (untrusted).
+- The Go API runtime (trusted to enforce limits, untrusted with plaintext).
+- The SQLite persistence layer (untrusted).
 
-### 1. Spoofing (Impersonating a user or system)
-- **Attack:** An attacker attempts to spoof a user's identity to view their history or usage quota.
-- **Mitigation:** Authenticated endpoints rely on Firebase Authentication JWTs. Firestore rules strictly enforce that `request.auth.uid == uid`, mathematically guaranteeing that users can only read/write their own metadata.
+## Assets
 
-### 2. Tampering (Modifying data in transit or at rest)
-- **Attack:** An attacker gains access to the SQLite database and modifies the ciphertext of a stored secret to trick the recipient.
-- **Mitigation:** The ciphertext is authenticated using the GCM (Galois/Counter Mode) authentication tag. If a single bit of the ciphertext or Initialization Vector (IV) is modified at rest, the `window.crypto.subtle.decrypt` function on the recipient's browser will fail with an authentication error and refuse to output plaintext.
+1. **Plaintext Secrets**: The unencrypted text and files users wish to share.
+2. **Decryption Keys**: 256-bit AES-GCM keys generated in the browser.
+3. **Admin Keys**: Tokens used by creators to delete their secrets early.
+4. **Service Availability**: The ability of the Go API to process requests.
 
-### 3. Repudiation (Denying an action occurred)
-- **Attack:** A malicious actor spams the system and denies doing so, leading to IP bans for legitimate users.
-- **Mitigation:** The system relies on standard IP-based token bucket rate limiting (100 req/sec global, 20 req/min per IP, with IPv6 collapsed to `/64`). In an authenticated context (Firebase), daily quotas are strictly enforced per `uid` via Firestore atomic transactions, providing a non-repudiable audit log of usage counters.
+## Actors
 
-### 4. Information Disclosure (Exposing private data)
-- **Attack 1 (Server Compromise):** A nation-state or malicious insider gains full root access to the Go server and dumps the SQLite database.
-  - **Mitigation:** The database only contains AES-256-GCM ciphertext. The decryption key is generated on the creator's device and appended to the URL fragment (`#key`). Browsers explicitly strip the URL fragment before sending the HTTP request (RFC 3986 §3.5). The server *never* sees the key, making the ciphertext mathematically useless to the attacker.
-- **Attack 2 (Traffic Analysis):** An attacker intercepts the encrypted payload and uses its exact byte size to infer the contents (e.g., guessing a specific password length).
-  - **Mitigation:** Null-Secret employs **Bucket Padding** for text messages. Before encryption, the text is padded to a fixed bucket size (1 KB, 5 KB, or 10 KB; larger text pads to the next multiple of 10 KB). Because the padding is encrypted alongside the real content, an attacker cannot differentiate between a 12-character password and a 900-byte private key. File attachments are **not** padded — their size is already revealed by the encrypted payload.
+- **Sender**: Creates secrets and holds the admin key.
+- **Recipient**: Receives the sharing link containing the decryption key.
+- **Eavesdropper**: Captures network traffic.
+- **Infrastructure Attacker**: Gains access to the VPS, the SQLite database, or the API process.
 
-### 5. Denial of Service (Crashing or exhausting the system)
-- **Attack:** An attacker uploads massive payloads to exhaust the server's RAM (OOM kill) or disk space.
-- **Mitigation:**
-  - **RAM Exhaustion:** The Go backend enforces a strict 56 MB `maxRequestBody` limit middleware on the `/api/v1/secret` endpoint. Requests exceeding this are dropped before the body is fully parsed.
-  - **Disk Exhaustion:** Secrets are automatically garbage collected. A background goroutine sweeps the SQLite database every 60 seconds and permanently deletes any secrets whose `expiresAt` timestamp has passed or whose `views >= viewLimit`. 
+## Threat Analysis
 
-### 6. Elevation of Privilege (Gaining unauthorized capabilities)
-- **Attack:** An attacker attempts to delete a secret they did not create.
-- **Mitigation:** When a secret is created, the server returns a cryptographically secure, randomly generated `adminKey`. The `DELETE /api/v1/secret/{id}` endpoint requires this specific `adminKey` to be provided in the `X-Admin-Key` header. Without it, early deletion is impossible.
+### 1. Information Disclosure
 
-## Out of Scope
+**Threat:** An attacker captures network traffic or compromises the SQLite database to read secrets.
 
-The following vectors are explicitly out of scope for this threat model:
-1. **Endpoint Compromise:** If the sender or recipient's device is infected with a keylogger, screen-scraper, or malicious browser extension, the plaintext is compromised before encryption or after decryption.
-2. **Supply Chain Attacks (Frontend):** If an attacker compromises the Vercel deployment pipeline and serves a malicious JavaScript bundle that exfiltrates the URL fragment (`#key`) to a third party, the system is compromised. (Mitigated partially by Subresource Integrity and strict CSP, but ultimately reliant on the host's integrity).
+**Mitigation:** 
+- The browser encrypts all secrets before transmission. 
+- The decryption key is encoded into the URL fragment (`#key`). Browsers strip URL fragments before sending HTTP requests, ensuring the key never traverses the network to the backend.
+- The Go backend applies a second layer of AES-256-GCM encryption at rest using a `MASTER_KEY`. This protects the data if an attacker copies the SQLite file (`nullsecret.db`) from disk.
+- The browser pads text payloads to fixed sizes (1024, 5120, or 10240 bytes) to obscure the length of the underlying plaintext, mitigating traffic analysis.
+
+### 2. Tampering
+
+**Threat:** An attacker alters the encrypted payload in transit or modifies the database records.
+
+**Mitigation:** 
+- The system exclusively uses AES-GCM, an Authenticated Encryption with Associated Data (AEAD) cipher.
+- If an attacker alters the ciphertext or initialization vector (IV), the authentication tag validation fails. Both the Go backend and the React frontend reject modified payloads during the decryption phase and refuse to process the data.
+
+### 3. Denial of Service
+
+**Threat:** An attacker issues millions of requests to exhaust server CPU, memory, or disk space.
+
+**Mitigation:** 
+- `internal/api/handlers.go` enforces a global limit of 100 requests per second using a token bucket.
+- A sliding window limits requests to 20 per minute per IP address. IPv6 addresses are truncated to a `/64` prefix to prevent evasion through suffix rotation.
+- A Go channel semaphore restricts active concurrent requests to 100.
+- `http.MaxBytesReader` caps incoming request bodies at 56MB.
+- The SQLite database enforces a hard cap of 1,000 active secrets. Upon reaching the limit, the backend evicts the 10 oldest secrets before allowing new insertions.
+
+### 4. Spoofing and Elevation of Privilege
+
+**Threat:** An attacker guesses a secret ID to access data prematurely, or guesses an admin key to delete a secret they do not own.
+
+**Mitigation:**
+- Secret IDs and Admin Keys are generated using cryptographically secure random number generators (`crypto/rand`).
+- The backend stores Admin Keys as SHA-256 hashes.
+- When evaluating a DELETE request, the backend hashes the provided key and compares it to the database hash using `crypto/subtle.ConstantTimeCompare`. This prevents an attacker from measuring response times to guess the key byte-by-byte.
+
+### 5. Repudiation
+
+**Threat:** A sender denies sending a secret, or a recipient denies opening it.
+
+**Mitigation:**
+- Null-Secret does not mitigate repudiation. The application prioritizes anonymity over auditability. It does not track read receipts, IP logs, or identity markers in the database schema. When a view limit is reached, the backend deletes the record permanently.
+
+## Residual Risk
+
+The architecture cannot protect against compromise inside the trusted boundary.
+
+- **Endpoint Compromise:** Malware, keyloggers, or malicious browser extensions on the sender or recipient devices can capture the plaintext.
+- **Recipient Action:** The recipient can copy the plaintext or capture a screenshot before the data disappears from memory.

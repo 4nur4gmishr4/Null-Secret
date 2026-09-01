@@ -1,197 +1,44 @@
-# Null-Secret Feature Roadmap
+# Features
 
-This document lists features that the existing codebase makes natural to add — the forward-looking roadmap. Each feature shows the user benefit in plain language, then a technical note for engineers.
+This document details the implemented features of Null-Secret and their constraints, followed by planned modifications.
 
----
+## Core Capabilities
 
-## 1. Account & Identity
+### Client-Side Encryption
+The browser executes AES-256-GCM encryption on user input prior to network transmission. The decryption key transmits entirely within the URL fragment (`#key`). The backend processes only ciphertext.
+- **Implementation:** `frontend/src/utils/crypto.ts`
+- **Constraint:** Requires a secure context (HTTPS or localhost) for the browser to expose `window.crypto.subtle`.
 
-### 1.1 Two-Factor Authentication (TOTP)
+### Payload Expiration
+Secrets exist temporarily. Creators define expiration parameters during creation.
+- **View Limits:** Secrets destroy themselves after 1, 2, or 5 successful reads.
+- **Time Limits:** Secrets expire after 1 hour, 24 hours, or 7 days, regardless of view count.
+- **Implementation:** `backend/internal/store/storage.go`
+- **Constraint:** Time-based expiration relies on a background worker executing every 60 seconds.
 
-Ask people to enter a 6-digit code from their authenticator app on every sign-in. Stops anyone who steals the password from getting in.
+### Early Deletion
+Creators receive an administrative token upon creating a secret. This token grants the ability to manually delete the secret before it expires.
+- **Implementation:** `backend/internal/api/handlers.go` and `frontend/src/pages/AdminDashboard.tsx`
+- **Constraint:** The backend stores a SHA-256 hash of the token. If the user loses the URL containing the token, deletion is impossible until natural expiration.
 
-> **For engineers.** TOTP with the standard `otpauth://` URI. Store the secret encrypted in Firestore under the user's UID. Verify with a 30-second window and a 2-step skew tolerance. Library: `otplib`.
+## Attachments
 
-### 1.2 Passkey / Biometric login
+### Binary Processing
+Users can attach files to their secrets. The browser processes these files into a binary layout (`[4-byte header length][JSON header][file bytes]`) rather than applying base64 text padding.
+- **Implementation:** `encryptFilePayload` in `frontend/src/pages/Home.tsx`
 
-Replace the password with a fingerprint, FaceID, or Windows Hello prompt. Faster and harder to phish.
+### Browser-Side Compression
+When a user selects multiple files, the frontend compresses them into a single `secure_attachments.zip` archive before encryption.
+- **Implementation:** Uses the `fflate` library within `frontend/src/pages/Home.tsx`
+- **Constraint:** Zipping occurs in browser memory. Extremely large file combinations may exhaust client memory limits before encryption begins. Total uncompressed input must remain under 30MB.
 
-> **For engineers.** WebAuthn flow via `navigator.credentials.create()` and `.get()`. Use Firebase Functions to verify the attestation. Allow multiple authenticators per user.
+## Roadmap
 
----
+### Secret Retrieval API
+A headless decryption client allowing automated systems to retrieve and decrypt secrets without a browser interface.
 
-## 2. Sharing & Delivery
+### End-to-End Encrypted Notifications
+A push mechanism alerting creators when a secret is opened, structured to ensure the backend cannot derive the secret's content or intended recipient identity.
 
-### 2.1 Email-gated unlock
-
-The secret only opens for one specific email address. The recipient gets a code by email and types it before the message decrypts.
-
-> **For engineers.** Send a one-time challenge token via SendGrid; verify on the backend before returning the ciphertext. Keep zero-knowledge by using the token only to gate access, not to derive the key.
-
-### 2.2 View notifications
-
-Get an email or a webhook ping when someone opens your secret.
-
-> **For engineers.** On `GET /secret/:id` increment view counter and enqueue a notification to the creator's email or webhook URL stored in their profile.
-
-### 2.3 Image and PDF preview before download
-
-For image and PDF attachments, show a thumbnail in the decrypted view so the recipient knows what they are about to download.
-
-> **For engineers.** Detect MIME type after decrypt; render with `<img>` for images and `<embed type="application/pdf">` for PDFs. All preview happens in-browser, the file never leaves the device.
-
-### 2.4 Markdown rendering
-
-Decrypted text messages render formatting (bold, lists, links) instead of plain text.
-
-> **For engineers.** `react-markdown` with `rehype-sanitize`. Disable raw HTML and remote images for safety.
-
-### 2.5 Code syntax highlighting
-
-If the message looks like code, color it.
-
-> **For engineers.** Detect language with `highlight.js/lib/core` lazy import.
-
-### 2.6 Multi-recipient links
-
-Generate a batch of unique links from one create flow, each with its own view counter.
-
-> **For engineers.** Loop the existing create endpoint. Show all generated links in a copy-all list.
-
----
-
-## 3. Security Hardening
-
-### 3.1 Captcha on view
-
-Make the recipient solve a small puzzle before the secret decrypts. Stops scripts from grinding through random URLs.
-
-> **For engineers.** Cloudflare Turnstile or hCaptcha invisible mode on the view page. Verify token at the backend before returning ciphertext.
-
-### 3.2 Rate-limit transparency
-
-If you trip the rate limiter, the page tells you when you can try again instead of showing a generic error.
-
-> **For engineers.** Backend should return `Retry-After` header. Frontend reads it and shows a countdown.
-
-### 3.3 Hardware key signing
-
-Sign every secret with a YubiKey or other hardware token at create time.
-
-> **For engineers.** WebAuthn `assertion` flow with a separate authenticator. Store signature alongside ciphertext; verify on view.
-
-### 3.4 Per-message ECDH (forward secrecy)
-
-Each secret uses a fresh public-private key pair so a future key compromise cannot decrypt past secrets.
-
-> **For engineers.** Generate ECDH P-256 key pair in `utils/crypto.ts`. Derive the AES key via HKDF. Replace the current single AES key in the URL fragment with the ephemeral public key.
-
-### 3.5 Tamper detection panel
-
-Show the recipient a green checkmark when the ciphertext authentication tag verifies, and a clear warning if it fails.
-
-> **For engineers.** AES-GCM already authenticates. Surface the failure as a distinct error code in `decrypt()` so the UI can render a stronger warning.
-
-### 3.6 IP and country allowlist
-
-The creator can restrict which countries or IP ranges can open the secret.
-
-> **For engineers.** GeoIP lookup in the backend (MaxMind DB) on `GET /secret/:id`. Compare with allowlist stored on the secret.
-
----
-
-## 4. UX Polish
-
-### 4.1 Browser notification when a secret is viewed
-
-Native OS notification fires when a creator's secret is opened.
-
-> **For engineers.** Notification API plus Service Worker. Permission prompt on the success page.
-
-### 4.2 Copy individual section from decrypted view
-
-Click any line of the decrypted message to copy just that line.
-
-> **For engineers.** Wrap each line in a clickable element that calls `navigator.clipboard.writeText`.
-
-### 4.3 Per-page progress indicator
-
-A thin top-of-page bar that fills as Suspense lazy-loads route chunks.
-
-> **For engineers.** `nprogress` or a custom `<Progress>` controlled by router events.
-
----
-
-## 5. Audit & Telemetry (privacy-preserving)
-
-### 5.1 Per-secret access log
-
-Show creators a timestamped list of when their secret was viewed (no IPs, no user agents).
-
-> **For engineers.** Append `{ts: int, ok: bool}` to a secret-scoped sub-collection on each view. Surface in the admin dashboard.
-
-### 5.2 Country-only geolocation
-
-Show the recipient country (not city or IP) so creators can spot suspicious openings.
-
-> **For engineers.** GeoIP at the backend, country code only. Opt-in per secret.
-
-### 5.3 Visual analytics for power users
-
-Charts of secrets created per day, average view counts, expiry distribution.
-
-> **For engineers.** `recharts` or `visx` against the existing `users/{uid}/history` collection.
-
----
-
-## 6. Compliance
-
-### 6.1 GDPR data export
-
-A button that produces a JSON archive of every piece of data we hold about you.
-
-> **For engineers.** Cloud Function that walks `users/{uid}/**` and returns a signed download URL. Honor the 30-day deadline.
-
-### 6.2 GDPR data deletion
-
-A button that erases everything tied to your account.
-
-> **For engineers.** Same as DestroyVault. Mark the deletion as immediate per Article 17.
-
-### 6.3 Audit log access
-
-For enterprises: an immutable audit log of admin actions.
-
-> **For engineers.** Append-only Firestore collection with hash-chained entries.
-
----
-
-## 7. Operations
-
-### 7.1 Multi-region deployment
-
-Run the backend in two regions so a region failure does not break the service.
-
-> **For engineers.** Deploy the Go binary to two Cloud Run regions behind a Global Load Balancer. Note: secrets live in SQLite (not in-memory), so a region's secrets persist across process restarts but are not replicated across regions.
-
-### 7.2 Secret replication (optional)
-
-Mirror each secret to a second region so creator-side burn still works under partial outages.
-
-> **For engineers.** Async replication queue. Strict ordering between burn and read to avoid revealing already-deleted ciphertext.
-
-### 7.3 Operator console
-
-A separate, internal-only dashboard for operators to view shard-level memory pressure, GC sweep timing, and rate-limit hit rates. Not exposed to end users.
-
-> **For engineers.** Expose `expvar` or Prometheus metrics behind a service-account guarded path.
-
----
-
-## 8. Quality-of-life cleanups
-
-- Remove the last 2 em-dashes from UI copy (`ErrorBoundary.tsx:77`, `ViewSecret.tsx:193`) and standardise on en-dashes or colon-phrase rewrites for a consistent action-verb style.
-
----
-
-_This roadmap is a living document. Add to it as new ideas land._
+### WebAuthn Integration
+Transitioning the optional password lock to accept FIDO2 hardware keys or biometric authenticators.

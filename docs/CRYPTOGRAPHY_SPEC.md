@@ -1,57 +1,80 @@
 # Cryptography Specification
 
-This document details the exact cryptographic primitives, key derivation functions, and byte layouts used by Null-Secret. It serves as a reference for security researchers and developers building interoperable clients.
+This document details the exact cryptographic implementations in Null-Secret. The codebase applies encryption twice: once in the browser (`frontend/src/utils/crypto.ts`) and once in the backend (`backend/internal/store/storage.go`).
 
-## High-Level Primitives
+## Browser Encryption
 
-Null-Secret relies exclusively on the **Web Crypto API** (`window.crypto.subtle`). No third-party cryptographic libraries are used for the core encryption flow to minimize supply chain risk.
+The React application uses the native `window.crypto.subtle` API to encrypt data before making HTTP requests.
 
-| Operation | Primitive | Parameters |
-| :--- | :--- | :--- |
-| **Symmetric Encryption** | AES-GCM | 256-bit key, 96-bit (12-byte) IV, 128-bit authentication tag |
-| **Key Generation** | CSPRNG | `crypto.getRandomValues(new Uint8Array(32))` |
-| **Key Derivation (Optional)** | PBKDF2 | HMAC-SHA256, 600,000 iterations, 128-bit (16-byte) salt |
+### Key Generation
 
-## The Encryption Pipeline
+If the user does not supply a password, the browser generates a random 256-bit key:
+```typescript
+window.crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+```
+The browser exports this key to a raw `ArrayBuffer`, encodes it to base64, and places it in the URL fragment (`#<base64_key>`).
 
-When a user creates a secret, the following pipeline executes entirely within their browser:
+### Key Derivation
 
-1. **Master Key Generation:**
-   A 32-byte (256-bit) cryptographically secure random key is generated using `crypto.getRandomValues()`.
-   *If the user specifies an optional password:* The 32-byte key is instead derived from the password using PBKDF2 (HMAC-SHA256) with 600,000 iterations and a securely generated 16-byte random salt.
+If the user supplies a password, the browser derives the key using PBKDF2:
+1. Generates a 16-byte random salt using `crypto.getRandomValues`.
+2. Encodes the password string to bytes.
+3. Derives a 256-bit key using PBKDF2 with HMAC-SHA256 and exactly 600,000 iterations.
+4. Includes the base64-encoded salt in the final API payload so the recipient can re-derive the key.
 
-2. **Bucket Padding:**
-   To prevent traffic analysis (inferring the secret based on the ciphertext length), the plaintext JSON string is padded to the nearest predefined bucket size (1 KB, 5 KB, 10 KB). Envelopes that already exceed 10 KB are padded to the next multiple of 10 KB. File attachments (see `encryptBytes`) are not padded: their size is inherent to the ciphertext, so padding would only add base64 bulk.
+### Text Payload Padding
 
-3. **Encryption:**
-   A 12-byte Initialization Vector (IV) is generated. The padded plaintext is encrypted using AES-256-GCM. The Web Crypto API automatically appends a 16-byte authentication tag to the resulting ciphertext.
+To prevent traffic analysis based on payload length, the browser pads text-only secrets.
+1. The plaintext is wrapped in a JSON envelope: `{"d": "plaintext", "p": "xxxx"}`.
+2. The padding field `p` expands until the JSON string matches the nearest bucket size.
+3. Bucket boundaries are 1,024 bytes, 5,120 bytes, and 10,240 bytes. Payloads exceeding 10,240 bytes are padded to the next multiple of 10,240.
 
-4. **Bundling:**
-   The ciphertext, IV, and optional salt are serialised into a JSON envelope `{ p, i, s? }` where `p` = base64 ciphertext, `i` = base64 IV, `s` = base64 salt (only present in password mode). This envelope is then base64-encoded to form the `payload` field sent to the server. The AES key itself is never included in the bundle — it is exported separately and placed in the URL fragment.
+### File Payload Layout
 
-## Payload Envelope
+File payloads do not use base64-string padding, as converting a 30MB file to base64 before padding expands it unnecessarily. Instead, files use a binary layout.
 
-The server-stored payload is a base64-encoded JSON string.
-
-### Standard Layout (No Password)
-```json
-{ "p": "<base64 ciphertext>", "i": "<base64 IV>" }
+The layout consists of a 4-byte length prefix, a JSON metadata string, and the raw file bytes:
+```
+[ 4-byte Big-Endian Unsigned Integer ] (Header Length)
+[ JSON String ] (Header: name, type, text)
+[ Raw File Bytes ]
 ```
 
-### Password-Protected Layout
+When a user attaches multiple files, the frontend compresses them using the `fflate` library. The resulting zip archive becomes the raw file byte segment.
+
+### AES-GCM Execution
+
+The browser generates a new 12-byte initialization vector (IV) for every operation. It passes the padded string or binary buffer into `crypto.subtle.encrypt` using the AES-GCM algorithm.
+
+The browser base64-encodes the ciphertext and the IV, assembling a JSON bundle:
 ```json
-{ "p": "<base64 ciphertext>", "i": "<base64 IV>", "s": "<base64 salt>" }
+{
+  "p": "<base64_ciphertext>",
+  "i": "<base64_iv>",
+  "s": "<base64_salt>"
+}
 ```
+The application sends this bundle to the backend. The `s` field is omitted if no password was used.
 
-The AES-256 key (32 bytes → 44 characters in base64) is placed in the URL fragment after `#` and is never transmitted to the server.
+## Backend Encryption
 
-## The "Zero-Knowledge" Guarantee
+The Go backend treats the incoming JSON bundle as untrusted data. It encrypts the payload before writing to the database.
 
-When the secret is successfully stored on the server, the server responds with a unique `id` (e.g., `a1b2c3d4`).
-The frontend constructs the final sharing link by concatenating the `id` and the raw Base64-encoded AES-256 data key into the URL fragment:
+### Operations
 
-`https://null-secret.app/v/a1b2c3d4#base64AESKeyHere`
+1. The backend reads a 32-byte hex-encoded `MASTER_KEY` from the environment on startup.
+2. When handling a POST request, `storage.go` generates a 12-byte IV using `crypto/rand`.
+3. The backend executes AES-256-GCM encryption on the JSON bundle.
+4. The backend prepends `v1:` to the ciphertext, followed by the IV, and stores the resulting blob in SQLite.
 
-According to RFC 3986 (Section 3.5), HTTP clients **must not** send the URL fragment (anything after the `#`) to the server. Therefore, the decryption key never touches the network, the backend, or the database. 
+### Admin Key Hashing
 
-When the recipient opens the link, the React frontend extracts the key from `window.location.hash`, fetches the ciphertext from the API using the `id`, and decrypts it locally.
+The backend returns a random admin key to the client during secret creation. The backend stores this key as a SHA-256 hash.
+
+When the client issues a DELETE request, it supplies the admin key in a header. The backend hashes the provided key and compares it against the database record using `crypto/subtle.ConstantTimeCompare`. A mismatch results in a 403 Forbidden response.
+
+## Failure Handling
+
+- If the browser receives a manipulated payload (e.g., altered ciphertext or IV), the AES-GCM authentication tag fails to validate. `crypto.subtle.decrypt` throws an error, and the UI displays a generic failure message.
+- If the backend receives an admin key that fails constant-time comparison, it does not alter the record.
+- If the backend reads a database row missing the `v1:` prefix, it returns a 500 Internal Server Error, assuming data corruption.

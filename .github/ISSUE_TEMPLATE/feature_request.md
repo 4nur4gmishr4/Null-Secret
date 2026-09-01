@@ -1,29 +1,16 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Propose a new capability
 title: '[FEATURE] '
 labels: enhancement
 assignees: ''
-
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**The Problem**
+Describe the limitation or problem you face.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Proposed Solution**
+Describe how the feature should behave. Focus on the user benefit before the technical implementation.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
-
-**Additional context**
-Add any other context or screenshots about the feature request here.
-
-**Security Considerations**
-If this feature involves:
-- Storing or transmitting secrets
-- Authentication/authorization changes
-- Cryptographic operations
-- New API endpoints
-
-Please describe the security implications and how they will be mitigated.
+**Security Impact**
+If this involves encryption, authentication, or data storage, outline the security boundaries and mitigations.

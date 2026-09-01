@@ -9,25 +9,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ## [Unreleased]
 
 ### Added
-- Professional documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CRYPTOGRAPHY_SPEC.md`, `docs/THREAT_MODEL.md`, `.github/SUPPORT.md`.
+- Documentation set: `LICENSE` (Proprietary), `CHANGELOG.md`, `SECURITY.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CRYPTOGRAPHY_SPEC.md`, `docs/THREAT_MODEL.md`, `docs/FEATURES.md`, `docs/PERFORMANCE.md`, `docs/USER_GUIDE.md`, `.github/SUPPORT.md`.
 - `.github/ISSUE_TEMPLATE/` with bug-report and feature-request forms.
-- `.github/workflows/release.yml`: tag-driven (`v*`) release pipeline that re-runs the full CI gate, cross-compiles the backend for Linux/macOS/Windows (amd64+arm64), builds the frontend bundle, and drafts a GitHub Release with auto-generated notes. Never auto-publishes.
-- `.github/workflows/dependency-review.yml`: blocks PRs whose dependency changes introduce high-severity known vulnerabilities.
-- CI now verifies the actual Render deploy artifact: builds `backend/Dockerfile` and smoke-tests the image (health check + create/read round-trip against the live API), so a Dockerfile regression can no longer pass CI and fail production.
+- `.github/workflows/release.yml`: tag-driven (`v*`) release pipeline that re-runs the CI gate, cross-compiles the backend, builds the frontend bundle, and drafts a GitHub Release.
+- `.github/workflows/dependency-review.yml`: blocks PRs whose dependency changes introduce high-severity vulnerabilities.
+- CI verifies the Render deploy artifact: builds `backend/Dockerfile` and smoke-tests the image.
 
 ### Removed
-- `docs/PROJECT_STATUS.md`: stale internal status report that duplicated README, CHANGELOG, and PERFORMANCE.md, and contained an outdated self-score (82/100) superseded by the full audit.
+- `docs/PROJECT_STATUS.md`: duplicated README and contained an outdated self-score.
 
 ### Changed
-- `.github/workflows/ci.yml`: added least-privilege `permissions`, per-ref `concurrency` (cancels superseded runs), made the workflow reusable via `workflow_call` for the release pipeline, and added the Docker image verification job.
-- `.github/dependabot.yml`: added the `github-actions` ecosystem so workflow action versions stay current.
-- `LICENSE` strengthened with trademark clause, reverse-engineering prohibition, copyright-notice preservation, limitation of liability, and governing law (Republic of India).
-- `README.md`: removed the duplicated "Current Features" bullet list (already in "What It Does"), replaced the License section wording, and fixed a broken Privacy Manifesto self-link.
-- `docs/FEATURES.md`: removed shipped features (session control, auto-logout, account deletion, email change, custom aliases, time-window unlock, drag-and-drop, QR, toasts, CSV export, password strength meter) and the duplicate "already does" list; the document is now the forward-looking roadmap only.
+- `.github/workflows/ci.yml`: added least-privilege `permissions`, per-ref `concurrency`, made the workflow reusable via `workflow_call`, and added the Docker image verification job.
+- `.github/dependabot.yml`: added the `github-actions` ecosystem.
+- `LICENSE` strengthened with trademark clause, reverse-engineering prohibition, copyright-notice preservation, limitation of liability, and governing law.
+- `README.md`: removed duplicated features list and fixed a broken self-link.
+- `docs/FEATURES.md`: removed shipped features from the roadmap; it is now the forward-looking roadmap and completed features reference.
 - `docs/ARCHITECTURE.md`: added the `unlock_at` column to the schema block.
 - `SECURITY.md`: added `Permissions-Policy` to the security headers list.
-- `.gitignore` rewritten with sectioned, professional patterns. `.env.example` is now correctly excluded from the ignore list so developers can bootstrap.
-- Footer no longer displays a hard-coded version string; the marketing copy now reads "Built for privacy".
+- `.gitignore` rewritten with sectioned patterns. `.env.example` is correctly excluded from the ignore list.
+- Footer no longer displays a hard-coded version string.
 - `README.md` no longer references a `v1.0.0` version label.
 
 ---
@@ -36,10 +36,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 
 ### Added
 - `frontend/src/utils/authErrors.ts`: maps 22 Firebase `auth/*` codes to plain-language messages.
-- `PROJECT_STATUS.md`: full project status report with scoring (82/100), architecture diagram, and gap analysis.
 
 ### Changed
-- `Authscreen.tsx`, `Signup.tsx`, `ForgotPassword.tsx`, `AccountSettings.tsx`, `DestroyVault.tsx` now use the shared `friendlyAuthError` translator. Users no longer see raw `Firebase: Error (auth/...)` strings.
+- `Authscreen.tsx`, `Signup.tsx`, `ForgotPassword.tsx`, `AccountSettings.tsx`, `DestroyVault.tsx` now use the shared `friendlyAuthError` translator.
 - All auth handlers clear previous errors before each attempt.
 
 ---
@@ -47,8 +46,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ## 2026-05-03 — Shared layout primitives
 
 ### Added
-- `SecurityPageHeader` component with `aside`, `lottie`, and `eyebrowColor` props for variant pages.
-- `BackLink` component for uniform "Back to …" navigation.
+- `SecurityPageHeader` component with `aside`, `lottie`, and `eyebrowColor` props.
+- `BackLink` component.
 
 ### Changed
 - `SessionTimeout`, `SecuritySettings`, `DeviceSessions`, `UsageHistory`, `AccountSettings`, `DestroyVault` refactored to use `SecurityPageHeader`.
@@ -64,49 +63,48 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 - CSS utility classes: `.eyebrow-label`, `.section-title`, `.caps-button`.
 
 ### Changed
-- `Authscreen`, `Signup`, `ForgotPassword` rebuilt on top of `AuthLayout` and the new form primitives (removed ≈200 lines of duplication).
+- `Authscreen`, `Signup`, `ForgotPassword` rebuilt on top of `AuthLayout` and the new form primitives.
 - `TwoFactorSetup`, `BiometricSetup` rebuilt on top of `SecurityPageHeader`.
-- Replaced `any` types in `Landing.tsx` and the `ProtectedRoute` helper in `App.tsx` with the proper Firebase `User` type.
+- Replaced `any` types in `Landing.tsx` and the `ProtectedRoute` helper in `App.tsx` with the Firebase `User` type.
 
 ### Fixed
-- **[Security]** `backend/internal/store/storage.go`: `decryptPayload` no longer silently returns unencrypted bytes when the `v1:` prefix is missing; it now errors out loudly.
-- **[Security]** Admin-key validation consolidated into `validateAdminKey` using `crypto/subtle.ConstantTimeCompare` exclusively. Removed the plaintext-key fallback path from both `GetInfo` and `Burn`.
-- **[Security]** `VACUUM INTO` backup path now escapes single quotes, closing a quote-injection vector that could be triggered by a crafted `BACKUP_DIR` value.
+- **[Security]** `backend/internal/store/storage.go`: `decryptPayload` errors out loudly when the `v1:` prefix is missing.
+- **[Security]** Admin-key validation consolidated into `validateAdminKey` using `crypto/subtle.ConstantTimeCompare`.
+- **[Security]** `VACUUM INTO` backup path now escapes single quotes to close an injection vector.
 
 ### Removed
-- Committed binary artifacts (`backend/api.exe`, `backend/cmd/api/api.exe`) and runtime SQLite files (`backend/test.db*`).
-- Stray typo-duplicate markdown files (`FEATURESs.md`, `READMEs.md`).
+- Committed binary artifacts and runtime SQLite files.
+- Stray typo-duplicate markdown files.
 
 ---
 
 ## 2026-05-03 — Terms of Service and streamlined navigation
 
 ### Added
-- `TermsOfService` page (`/terms`) with 11 sections covering acceptance, responsibilities, privacy, account terms, prohibited uses, and modifications.
+- `TermsOfService` page (`/terms`) with 11 sections.
 
 ### Changed
-- Hamburger menu slimmed: removed the verbose "Resources", "Appearance", "Legal", and "Contact" sections. Only "Navigate" and "Your account" remain.
-- Footer bottom-bar "Terms of Service" link now points to `/terms` instead of a GitHub LICENSE file.
+- Hamburger menu slimmed down to "Navigate" and "Your account".
+- Footer bottom-bar "Terms of Service" link now points to `/terms`.
 
 ---
 
 ## 2026-05-03 — Mandatory authentication
 
 ### Added
-- `ProtectedRoute` wrapper component in `App.tsx` that guards authenticated routes: `/app`, `/history`, `/security`, `/security/*`, `/account`.
-- Firebase auth state listener in `ProtectedRoute`; unauthenticated users are redirected to `/login`.
+- `ProtectedRoute` wrapper component in `App.tsx` that guards authenticated routes.
+- Firebase auth state listener in `ProtectedRoute`.
 
 ### Changed
-- Landing-page "View Source" button replaced with "Sign In to Start" and "Create Account" CTAs.
-- Desktop header "Create Secret" button now redirects to `/login` when the user is not signed in.
-- Hamburger menu "Create Secret" item respects the same protection.
+- Landing-page CTA replaced with "Sign In to Start".
+- Header "Create Secret" button redirects to `/login` when the user is not signed in.
 
 ---
 
 ## 2026-05-03 — Context-aware landing page
 
 ### Changed
-- Landing page now reads authentication state. Signed-in users see "Create Secret" and "My Account"; signed-out users see "Sign In to Start" and "Create Account".
+- Landing page reads authentication state. Signed-in users see "Create Secret" and "My Account"; signed-out users see "Sign In to Start" and "Create Account".
 - Final CTA section adapts its copy and destination based on authentication state.
 
 ---
@@ -114,10 +112,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 ## 2026-05-03 — UI polish and professional footer
 
 ### Added
-- 4-column footer: Branding, Product, Resources, Connect. Includes inline SVG icons for GitHub, Twitter/X, LinkedIn, Email. A bottom bar carries Privacy Policy and Terms links.
+- 4-column footer with links.
 
 ### Changed
-- All "Log out" and "Sign out" UI copy rendered in red (`text-red-500`) across `Layout`, `DeviceSessions`, and `SuperAdmin`.
+- Log out UI copy rendered in red (`text-red-500`).
 - `SuperAdmin` "Lock" button adopts the same red treatment.
 
 ---
@@ -126,10 +124,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The
 
 Initial feature set shipped:
 
-- Browser-side AES-256-GCM encryption with PBKDF2-SHA256 (600 000 iterations).
+- Browser-side AES-256-GCM encryption with PBKDF2-SHA256.
 - One-time and time-limited share links.
-- File attachments up to 10 MB (single inline, multiple auto-zipped).
-- Self-destructing SQLite storage with TTL / view-limit deletion, encrypted at rest.
+- File attachments up to 30 MB.
+- Self-destructing SQLite storage.
 - Admin links for view-count checking and early burning.
 - Firebase email and Google sign-in.
 - Light, dark, and system-preference themes.
@@ -137,5 +135,4 @@ Initial feature set shipped:
 - Inactivity-based auto-logout.
 - Backend health indicator.
 - Per-IP and global rate limiting.
-- Content Security Policy, HSTS, and related security headers.
 - Graceful shutdown and periodic backup worker.

@@ -1,93 +1,57 @@
 # Support
 
-Need help with Null-Secret? Pick the channel that matches what you are trying to do.
-
----
-
-## Table of Contents
-
-- [I found a security vulnerability](#i-found-a-security-vulnerability)
-- [I found a bug](#i-found-a-bug)
-- [I have a feature idea](#i-have-a-feature-idea)
-- [I have a question about using the app](#i-have-a-question-about-using-the-app)
-- [I cannot decrypt a secret](#i-cannot-decrypt-a-secret)
-- [I forgot my password](#i-forgot-my-password)
-- [I want to contribute](#i-want-to-contribute)
-- [Response expectations](#response-expectations)
-
----
+Choose the appropriate channel for your issue.
 
 ## I found a security vulnerability
 
 **Do not open a public issue.** Follow the private disclosure process in [SECURITY.md](../SECURITY.md).
 
-Send details to [anuragmishrasnag06082004@gmail.com](mailto:anuragmishrasnag06082004@gmail.com) with `[Null-Secret Security]` in the subject line.
-
----
+Email [anurag.mishra.core@gmail.com](mailto:anurag.mishra.core@gmail.com) with `[Null-Secret Security]` in the subject line.
 
 ## I found a bug
 
-1. Search existing issues first to avoid duplicates.
+1. Search existing issues to avoid duplicates.
 2. Open a new issue using the **Bug report** template.
 3. Include:
-   - A clear reproduction (steps, request, screenshot, or screencast).
-   - The browser and OS you are on.
-   - Any error messages from the DevTools Console.
-   - The commit SHA you are running if you know it (visible via `git rev-parse HEAD` when self-hosting).
+   - Reproduction steps.
+   - Operating system and browser version.
+   - DevTools console errors.
+   - The commit SHA if you are self-hosting.
 
-If the bug involves data loss or account lockout, mark the issue as `priority/high` and mention `@4nur4gmishr4`.
-
----
+If the bug involves data loss, mark it `priority/high` and ping `@4nur4gmishr4`.
 
 ## I have a feature idea
 
-1. Check [FEATURES.md](../docs/FEATURES.md) to see whether it is already planned.
+1. Check [FEATURES.md](../docs/FEATURES.md) to see if it is already planned.
 2. Open an issue using the **Feature request** template.
-3. Describe the user benefit first, then any implementation ideas. Small, focused proposals are easier to ship than sweeping rewrites.
-
-For non-trivial changes, open an issue before writing code so the design can be discussed.
-
----
+3. Describe the user benefit before proposing implementation details. 
 
 ## I have a question about using the app
 
-The [User Guide](../docs/USER_GUIDE.md) covers the main flows: creating a secret, using a password, setting view limits, understanding self-destruction, and managing your account.
-
-If it does not answer your question, open a **Discussion** (or a regular issue labelled `question`) on GitHub.
-
----
+Read the [User Guide](../docs/USER_GUIDE.md). If your question remains unanswered, open a **Discussion** (or an issue labelled `question`) on GitHub.
 
 ## I cannot decrypt a secret
 
-Most decryption failures come from one of these causes:
+Decryption fails under these conditions:
 
-1. **The link was shortened or altered.** The fragment after `#` carries the decryption key. If anything after `#` is missing or changed, the message cannot be read.
-2. **The view limit is already reached.** Once a secret is opened the allowed number of times, the server wipes it. There is no recovery — this is the design.
-3. **The password is wrong.** If the creator added a password layer, a mistyped password yields the same "could not unlock" message as a broken link. Ask the sender to resend or confirm the password.
-4. **The secret expired.** If the TTL elapsed before anyone opened it, the server purges it and returns `410 Gone`.
-5. **You are on the wrong device.** Some browser sync services scrub URL fragments. Try opening the link on the device where it was first received.
+1. **Altered Link:** The decryption key resides in the URL fragment (`#key`). If this is missing or changed, decryption is impossible.
+2. **View Limit Reached:** The server deletes the record after it reaches the specified view count.
+3. **Incorrect Password:** A wrong password prevents decryption.
+4. **Expired Secret:** The server deletes the record after the time limit passes.
 
-If none of the above applies, file a bug report with the exact error message. Never share the full URL in a public issue.
-
----
+If you suspect a different issue, file a bug report. Do not post the full secret URL in public issues.
 
 ## I forgot my password
 
-Use the **Forgot your password?** link on the sign-in page. Firebase emails a reset link; check spam if it does not arrive in a few minutes.
-
-If you no longer have access to the email on the account, there is no manual recovery. For privacy reasons, we do not store enough information to verify ownership any other way. Create a new account with a new email.
-
----
+Click the **Forgot your password?** link on the sign-in page to receive a reset email. If you lose access to your email address, you cannot recover the account. We do not store sufficient metadata for manual verification.
 
 ## I want to contribute
 
-Null-Secret is closed-source and we do not accept external pull requests or feature branches. If you have found a bug or have a feature idea, open an issue using the templates above. Security findings follow the [private disclosure process](../SECURITY.md).
-
----
+Null-Secret is closed-source. We do not accept pull requests. Please report bugs or request features via the issue templates.
 
 ## Response expectations
 
-This is a single-maintainer project, so response times vary.
+This is a single-maintainer project.
 
 | Channel | Typical first response |
 |---|---|
@@ -95,5 +59,3 @@ This is a single-maintainer project, so response times vary.
 | High-severity bugs | ≤ 3 business days |
 | Normal bugs and questions | ≤ 1 week |
 | Feature requests | Batched monthly |
-
-If an issue sits untouched longer than the window above, a polite bump comment is appreciated.

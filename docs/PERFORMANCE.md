@@ -1,65 +1,31 @@
-# Performance & Benchmarks
+# Performance
 
-Null-Secret is engineered to be extremely lightweight and fast. This document outlines the expected performance characteristics, hard limits, and benchmarks of the system.
+This document records the exact capacity limits and scaling behaviors of Null-Secret. The architecture prioritizes predictable memory usage and denial-of-service resilience over unbounded throughput.
 
-## 1. Backend Performance (Go + SQLite)
+## Configured Limits
 
-The backend is compiled to a single, statically linked Go binary. 
+The following limits are hardcoded into the Go backend (`backend/internal/api/handlers.go` and `backend/internal/store/storage.go`):
 
-### Footprint
-- **Memory:** The idle memory footprint of the Go API is typically `< 15 MB`. Under heavy load (handling 30 MB payload uploads), it remains bounded by the Go garbage collector and comfortably runs on Render's 512 MB Free Tier limit.
-- **Binary Size:** The Docker image uses `gcr.io/distroless/static-debian12`, resulting in a final compressed image size of roughly `~10 MB`.
+| Component | Limit | Behavior on Violation |
+| :--- | :--- | :--- |
+| **Global Token Bucket** | 100 req/sec | Returns `429 Too Many Requests`. |
+| **IP Sliding Window** | 20 req/min | Returns `429 Too Many Requests`. Evaluates IPv6 addresses by `/64` prefix. |
+| **In-Flight Semaphore** | 100 concurrent requests | Returns `503 Service Unavailable`. |
+| **Request Body Size** | 56 MB | Connection closed by `http.MaxBytesReader`. |
+| **SQLite Row Count** | 1,000 active rows | Database evicts the 10 oldest rows during `INSERT`. |
 
-### Throughput & Rate Limits
-- The token-bucket rate limiter enforces a strict **100 requests per second global limit** to prevent CPU exhaustion on small instances.
-- Individual IP addresses are throttled to **20 requests per minute** (sliding window, IPv6 collapsed to `/64`).
-- **SQLite Concurrency:** SQLite is configured with WAL (Write-Ahead Logging) mode (`_journal_mode=WAL`). This allows simultaneous readers and a single writer, allowing the application to achieve thousands of reads per second on minimal hardware without locking the database.
+## Source Code Observations
 
-### Payload Limits
-To prevent Out-Of-Memory (OOM) crashes, the `maxRequestBody` middleware strictly caps incoming payloads at **56 MB** (sized for a 30 MB attachment's base64 expansion). Any request exceeding this limit is rejected instantly with a `413 Payload Too Large` status code, before the body is buffered into memory.
+- **Payload Expansion:** Encrypting a file in the browser increases its size before transmission. Base64 encoding expands binary data by ~33%. To fit within the 48MB database limit and 56MB HTTP limit, the frontend restricts raw file inputs to 30MB.
+- **Client-Side Zipping:** Selecting multiple files triggers browser-side compression via `fflate`. This reduces network egress overhead but requires the client to hold the uncompressed files, the zip archive, and the final ciphertext in memory simultaneously. Devices with low RAM may crash the browser tab if attempting to compress 30MB of highly incompressible data.
 
-## 2. Frontend Performance (React)
+## Expected Bottlenecks
 
-The frontend is built for speed and security, optimized using Vite.
+1. **Client Memory Exhaustion:** For large payloads, the browser is the primary bottleneck. The AES-GCM buffer operations require contiguous memory allocation. 
+2. **Network Bandwidth:** Serving a 48MB payload blocks an HTTP connection until the transfer completes. The in-flight semaphore caps connections at 100. If 100 clients concurrently download 48MB payloads on slow network links, the server blocks all subsequent requests until a slot frees up.
+3. **SQLite Write Contention:** SQLite in WAL mode permits concurrent readers but only one writer. Heavy, sustained POST requests will queue on the SQLite write lock. The `busy_timeout` is configured to 5000ms. Writes taking longer than 5 seconds will fail with `SQLITE_BUSY`.
 
-### Bundle Size
-- **Lazy Loading:** Heavy assets, such as Lottie animations (which can be >300 KB of JSON), are lazy-loaded via dynamic imports (`import()`) only when the user scrolls them into view.
-- **Tree Shaking:** The Web Crypto API requires zero external dependencies, saving hundreds of kilobytes compared to bundling libraries like `crypto-js` or `libsodium.js`.
+## Unmeasured Assumptions
 
-### Cryptographic Speed
-The Web Crypto API (`window.crypto.subtle`) leverages native C/C++ implementations (and hardware acceleration where available) provided by the browser. 
-- **AES-256-GCM:** Encrypting a maximum 30 MB payload takes milliseconds on a modern CPU.
-- **PBKDF2:** The key derivation function is intentionally configured to be computationally expensive (600,000 iterations). This will typically pause the main thread for `~200ms to ~800ms` depending on the device CPU. A loading state ("Locking your message...") is rendered to provide immediate user feedback while the CPU churns.
-
-## 3. Scaling
-
-Null-Secret is architected as a **single vertical instance**: one Go process + one SQLite file + in-memory rate limiting. This comfortably serves the design targets (thousands of reads/sec on minimal hardware, < 15 MB idle RAM). At the moment this stops being true, scale out in the order below — each step is independent and additive, so the service keeps running at every stage.
-
-**When to act:** monitor `(created + retrieved) / sec` from the `/api/v1/admin/telemetry` endpoint, or the global rate limiter's `429` count. Sustained 429s from the global 100 req/s token bucket, or a single DB file on a disk at capacity, are the triggers.
-
-### Step 1 — Move the storage layer to PostgreSQL (unblocks horizontal replicas)
-
-SQLite is the hard single-writer constraint: only one process may hold a write transaction at a time. To run more than one backend container, swap the storage backend:
-
-1. `internal/store/storage.go` defines the full surface used by the API: `Store`, `GetInfo`, `RetrieveAndDelete`, `Burn`, `PurgeAll`, and the TTL sweep. Extract these into a `Store` interface in `internal/store` (the API already depends only on the concrete `*store.Storage` via `api.store` — introduce the interface there and type `API.store` as it).
-2. Add a Postgres implementation behind that interface. The schema is small (one `secrets` table + a rate-limit key-value table); port the schema and use `SELECT ... FOR UPDATE` where `BEGIN IMMEDIATE` was used (the write-path transactions in `RetrieveAndDelete` and `Burn`).
-3. Encryption at rest (`MASTER_KEY`, `v1:` prefix) and the decrypt-before-delete invariant live in `storage.go` and must be carried into the new implementation unchanged — do not touch the crypto.
-4. Move the TTL worker and `VACUUM INTO` backup worker out of `NewStorage` into a per-implementation concern. Postgres needs no WAL or `VACUUM`; schedule the expiry `DELETE` on the same 60s ticker, and keep backups with `pg_dump` or logical replication instead of `VACUUM INTO`.
-
-### Step 2 — Move rate limiting to Redis (shared state across instances)
-
-The per-IP sliding-window limiter (`RateLimiter` in `storage.go`) and the global token bucket live in process memory, so each replica enforces its own budget. Swap the per-IP limiter for a shared Redis one:
-
-1. `RateLimiter.Allow(ip)` is the only method the API calls. Extract the `Allow(ip) bool` signature into an interface and add a Redis-backed implementation using a sorted set per window (`ZREMRANGEBYSCORE` + `ZCARD` + `ZADD`, one key per `ip`, TTL = window). The in-memory implementation stays as the default and is what unit tests use.
-2. The global 100 req/s token bucket (`rate.NewLimiter` in `handlers.go`) is the circuit-breaker for CPU exhaustion on a small instance — it is fine to keep it per-process (it is not the correctness boundary, the per-IP limiter is). Document that choice in the interface.
-3. Add `REDIS_URL` to `config/config.go`; when unset, keep the in-memory path (backwards-compatible, zero-config deploys).
-
-### Step 3 — Multi-replica deployment
-
-With Step 1 + Step 2 complete, `backend/render.yaml` (or any platform) can scale the web service to N replicas behind the load balancer:
-
-- Each replica runs the same stateless Go binary; the only shared state is Postgres + Redis.
-- Sessions and admin keys are bearer tokens — nothing sticky is required.
-- `TRUST_PROXY` must be `true` so per-IP limits see the real client IP behind the proxy (already defaulted in `render.yaml`).
-
-**Deliberately out of scope:** this project intentionally ships as a single vertical instance. Steps 1–3 exist to keep the migration cheap if the service grows; nothing before that point is engineered around them.
+- The precise memory footprint of the Go binary under sustained maximum load (100 concurrent 56MB uploads) is unmeasured. We assume the Go garbage collector handles the 5.6GB theoretical heap expansion aggressively enough to prevent an Out Of Memory (OOM) kill on instances with limited RAM.
+- We assume the 5-minute background rate-limiter cleanup interval prevents memory leaks from the `sync.Map` of IP addresses, but this has not been profiled against a distributed botnet rotating millions of IPs.

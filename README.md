@@ -1,194 +1,90 @@
 # Null-Secret
 
-> [!CAUTION]
-> **PROPRIETARY SOFTWARE — NOT OPEN SOURCE**
-> The Null-Secret application is free to use, but the source code within this repository is strictly proprietary. You are strictly prohibited from copying, modifying, reproducing, distributing, publishing, or re-hosting this code in whole or in part without explicit written permission. See `LICENSE` for details.
+Null-Secret is an ephemeral sharing application. The browser encrypts text and file payloads before transmitting them. The backend stores the encrypted data and serves it through a REST API. Secrets delete automatically when they reach a view limit or a time limit.
 
+## Implementation Overview
 
-A zero-knowledge, end-to-end encrypted secret-sharing service. The browser
-encrypts every message with **AES-256-GCM** before it leaves your device.
-The server only ever stores ciphertext, holds it in SQLite database,
-and deletes it the moment it expires or hits its view limit.
+1. **Client-Side Encryption**: The browser encrypts payloads using the Web Crypto API (AES-256-GCM).
+2. **Key Transport**: The browser appends the decryption key to the sharing link as a URL fragment (`#key`). Because browsers do not send URL fragments in HTTP requests, the backend does not receive the key.
+3. **Storage Encryption**: The backend encrypts the received payload a second time using a server-side `MASTER_KEY` before writing it to SQLite.
+4. **Data Deletion**: Background workers delete expired records from the database. Reaching a view limit triggers immediate deletion.
 
----
+## Tech Stack
 
-## Table of Contents
+- **Frontend**: React 19, Vite, TailwindCSS (v4), Web Crypto API (`window.crypto.subtle`).
+- **Backend**: Go 1.22+, `go-chi/chi` router, `modernc.org/sqlite`.
+- **Database**: SQLite in WAL mode.
+- **Identity**: Firebase Authentication (optional, used only for quotas and history).
 
-- [Quick Start](#quick-start)
-- [What It Does](#what-it-does)
-- [Architecture](#architecture)
-- [Security Model](#security-model)
-- [Frontend Feature Map](#frontend-feature-map)
-- [Roadmap](#roadmap)
-- [Closed Source](#closed-source)
-- [License](#license)
+## Project Structure
 
----
-
-## Quick Start
-
-**For users:** See [USER_GUIDE.md](./docs/USER_GUIDE.md) for a simple, non-technical guide on how to use Null-Secret.
-
-**For developers:** Jump to [Local Development](#local-development) to get started.
-
----
-
-## What It Does
-
-- Creates a **one-time link** (`/v/{id}#{key}`) that another person can open
-  to read the message you sent.
-- Encrypts the message **inside your browser** with `window.crypto.subtle`
-  using AES-256-GCM. The decryption key never leaves your device — it
-  travels in the URL fragment, which browsers refuse to send to servers.
-- Lets the recipient open the link a fixed number of times (default 1).
-  Once that limit is reached, the message is gone forever.
-- Optional second password the recipient must type, derived through
-  PBKDF2-SHA256 with 600 000 iterations.
-- Optional **file attachments** up to 30 MB combined, packed into a Zip
-  inside the encrypted blob, never seen by the server.
-- Optional Firebase **sign-in** that adds a 30-secret-per-day cap and a
-  history page that lists only IDs and timestamps (never message content).
-
-Opening a shared secret does not require an account. Creating a new
-secret requires a free sign-in, which also unlocks a quota counter, a
-history view, and account-level security settings.
-
----
-
-## Architecture
-
-```
-┌─ Browser (React 19 + Vite, Web Crypto API) ─────────────────────────┐
-│                                                                     │
-│   ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐    │
-│   │ AES-256-GCM  │  │ PBKDF2-SHA256│  │ Bucket-padded payload  │    │
-│   │ encrypt      │  │ key stretch  │  │ (1K / 5K / 10K) │    │
-│   └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘    │
-│          └─────────────────┴──────────────────────┘                 │
-│                            │                                        │
-│                            ▼                                        │
-│                POST /api/v1/secret  { payload, expiry, viewLimit }  │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │
-                             ▼
-┌─ Go API (chi router, SQLite database) ─────────────────────────────┐
-│                                                                     │
-│   ┌─────────────────────────────────────────────────────────────┐   │
-│   │ SQLite database with secrets table                           │   │
-│   │ Background sweeper deletes expired entries every minute     │   │
-│   │ Token-bucket rate limiter (100 req/sec global)               │   │
-│   │ Atomic delete on view limit reach                           │   │
-│   └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+```text
+.
+├── backend/            # Go REST API
+│   ├── cmd/api/        # Entrypoint (main.go)
+│   ├── internal/api/   # HTTP handlers, middleware, rate limiting
+│   ├── internal/store/ # SQLite interface, background workers, encryption-at-rest
+│   └── Dockerfile      # Distroless container definition
+├── frontend/           # React SPA
+│   ├── src/pages/      # Views (Home, ViewSecret, AdminDashboard, etc.)
+│   ├── src/utils/      # Cryptography, Firebase, and API utilities
+│   └── package.json    # Dependencies and build scripts
+└── docs/               # Architecture, security, and usage documentation
 ```
 
+## Local Development
+
+### Prerequisites
+
+- Go 1.22+
+- Node.js 20+
+
+### 1. Start the Backend
+
+```bash
+cd backend
+go mod download
+
+# Provide a 32-byte hex string for encryption at rest.
+# Without this, the server generates a random key on boot.
+export MASTER_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+export SUPER_ADMIN_KEY="your-secret-admin-key"
+
+go run ./cmd/api
 ```
-┌─ Optional Firebase (only when the user is signed in) ───────────────┐
-│   • Authentication (Email/Password, Google)                         │
-│   • Firestore                                                       │
-│       users/{uid}/history    list of created secret IDs             │
-│       usage/{uid}/daily/{ymd} integer counter for the daily cap     │
-└─────────────────────────────────────────────────────────────────────┘
+The API listens on `http://localhost:8080`.
+
+### 2. Start the Frontend
+
+```bash
+cd frontend
+npm install
+
+cp .env.example .env.local
 ```
 
-**Privacy properties:**
+Edit `.env.local` to point to the API:
+```env
+VITE_API_BASE=http://localhost:8080/api/v1
+```
 
-- Decryption key travels in URL fragment (never sent to server per RFC 3986)
-- Server holds only encrypted ciphertext in SQLite database
-- Firestore stores only secret ID and timestamp (never content or keys)
-- Text messages are bucket-padded (1 KB / 5 KB / 10 KB); file attachments are sent at their true size
+Run the development server:
+```bash
+npm run dev
+```
+The SPA loads at `http://localhost:5173`.
 
----
+## Documentation
 
-## Security Model
+See the `docs/` directory for detailed specifications:
 
-| Layer                     | Mechanism                                                         |
-|---------------------------|-------------------------------------------------------------------|
-| Confidentiality           | AES-256-GCM via `window.crypto.subtle`                            |
-| Integrity / authenticity  | GCM authentication tag (rejects any tampering)                    |
-| Key delivery              | URL fragment (RFC 3986 §3.5: never sent to server)                |
-| Optional second factor    | PBKDF2-HMAC-SHA256 with 600,000 iterations                         |
-| Traffic-analysis resistance | Text padded to 1 KB / 5 KB / 10 KB buckets (larger: next 10 KB multiple); file attachments sent at true size |
-| Transport                 | HSTS preload, X-Content-Type-Options, X-Frame-Options DENY        |
-| Content security          | Build-time CSP `_headers` file, `connect-src` pinned to the API origin |
-| Rate limiting             | 100 req/sec global, per-IP limits                                 |
-| Storage                   | SQLite database with automatic GC on TTL or view-limit hit        |
-| Account deletion          | `Destroy Vault` deletes Firestore data + Firebase Auth user       |
-
-**What we do NOT collect or store:**
-
-- IP addresses (in-memory only for rate limiting; never written down)
-- Trackers, marketing scripts, third-party analytics
-- Plaintext messages, encryption keys, or optional passwords
-- Any link between sign-in identity and secret content (only ID and timestamp stored)
-
-See the in-app `/privacy` page for the full plain-language story.
-
----
-
-## Frontend feature map
-
-| Page / Route                 | What it does                                                              | Auth required |
-|------------------------------|---------------------------------------------------------------------------|---------------|
-| `/`                          | Marketing landing page                                                    | no            |
-| `/app`                       | Compose a secret: text + files, expiry, view limit, optional password     | yes           |
-| `/s/:id#key`                 | Confirmation page with copy-link, QR code, admin link                     | no            |
-| `/v/:id#key`                 | Recipient page: decrypt, optional password prompt, view counter           | no            |
-| `/admin/:id#adminkey`        | Creator dashboard: view count, expiry, burn-now button                    | no            |
-| `/super-admin`               | Super admin dashboard for advanced management                             | yes           |
-| `/login`                     | Email/password and Google sign-in                                         | no            |
-| `/signup`                    | Create account                                                            | no            |
-| `/forgot-password`           | Send password reset email                                                 | no            |
-| `/account`                   | Edit display name; change email with verification                         | yes           |
-| `/history`                   | List of secrets you created (IDs only); CSV export; daily quota gauge     | yes           |
-| `/security`                  | Hub for security settings                                                 | yes           |
-| `/security/timeout`          | Auto-logout window (5 / 15 / 60 / 480 minutes)                            | yes           |
-| `/security/sessions`         | Current device summary; sign out                                          | yes           |
-| `/security/destroy`          | Permanently delete account, history, and quota counters                   | yes           |
-| `/security/2fa`              | Informational: explains why TOTP needs a backend                          | yes           |
-| `/security/biometric`        | Informational: explains WebAuthn requirements                             | yes           |
-| `/privacy`                   | Privacy manifesto with a TOC and anchor jumps                             | no            |
-
-UI conventions:
-
-- **Single Lottie wrapper** (`components/LottieView.tsx`) hides the
-  lottie-react default-export interop quirk so every page renders the
-  animation reliably.
-- **`prefers-reduced-motion: reduce`** disables every animation and
-  transition site-wide.
-- **`html { scroll-behavior: smooth }` + `.section-anchor`** with
-  `scroll-margin-top: calc(var(--header-h) + 24px)` makes anchor jumps
-  land below the sticky header.
-- **Auto-logout** is implemented in `Layout.tsx`. Inactivity is the
-  absence of mouse, key, scroll, and touch events for the configured
-  number of minutes.
-- **Footer is hidden** on `/login`, `/signup`, and `/forgot-password`
-  so the auth screens fit one viewport with no scroll.
-
----
-
-## Roadmap
-
-The full backlog lives in [`FEATURES.md`](./docs/FEATURES.md). Items that
-require backend work (TOTP, WebAuthn, custom slug aliases, time-window
-unlock, email-gated unlock, view notifications, captcha, hardware-key
-signing, ECDH forward secrecy, IP allowlist, per-secret access log,
-country geolocation, GDPR data export/delete/audit, multi-region
-replication, operator console) are flagged there and not stubbed in
-the UI to avoid implying a security feature is active when it isn't.
-
----
-
-## Closed Source
-
-This software is proprietary. We do not accept external pull requests, feature branches, or community contributions to the source code. If you find a security vulnerability, please see `SECURITY.md` to report it privately.
-
----
+- [Architecture](./docs/ARCHITECTURE.md) - System topology, component boundaries, and request lifecycle.
+- [Cryptography Specification](./docs/CRYPTOGRAPHY_SPEC.md) - Cryptographic primitives, key derivation, and binary payloads.
+- [Threat Model](./docs/THREAT_MODEL.md) - Trust boundaries, attack paths, and mitigations.
+- [Performance](./docs/PERFORMANCE.md) - Memory limits, rate limits, and database scaling.
+- [User Guide](./docs/USER_GUIDE.md) - Application workflows.
+- [Features](./docs/FEATURES.md) - Implemented capabilities and planned changes.
 
 ## License
 
-Proprietary software designed, developed, and managed by **Anurag Mishra**. All rights
-reserved. You may view this repository for reference, but copying, modifying,
-redistributing, or re-hosting the code — in whole or in part — is strictly
-prohibited without prior written permission. See [`LICENSE`](./LICENSE) for the
-full legal terms, including trademark and reverse-engineering provisions.
+Copyright (c) 2026 Anurag Mishra. All Rights Reserved. PROPRIETARY AND CONFIDENTIAL.
